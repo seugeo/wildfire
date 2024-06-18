@@ -1,0 +1,171 @@
+---
+title: "Ch3_Wildfire_Raw"
+output: html_document
+date: "2024-05-26"
+---
+
+# LOAD PACKAGES
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+# VIROME ABUNDANCE TABLE
+```{r}
+# LOAD ABUNDANCE DATA FOR LNU
+otu=read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/all.good.75.tmean.tsv", delim = "\t", col_names = TRUE)
+# prep data frame
+otu <- col_to_row(otu, "Contig", "contignames")
+# edit column names 
+colnames(otu) <- gsub(pattern=".vib.sI.Trimmed.Mean", replacement = "", x=colnames(otu))
+otu_filtered <- otu %>%
+  filter(rowSums(.) !=0)
+# save RDS file
+saveRDS(otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_otu.RDS")
+```
+
+```{r}
+# LOAD ABUNDANCE DATA FOR LNU in Blodgett dataset
+otu=read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/LNU.in.Blodgett.75.tmean.tsv", delim = "\t", col_names = TRUE)
+# prep data frame
+otu <- col_to_row(otu, "Contig", "contignames")
+# edit column names 
+colnames(otu) <- gsub(pattern=".vib.sI.Trimmed.Mean", replacement = "", x=colnames(otu))
+otu_filtered <- otu %>%
+  filter(rowSums(.) !=0)
+# save RDS file
+saveRDS(otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_blodgett_otu.RDS")
+```
+
+```{r}
+# LOAD ABUNDANCE DATA FOR LNU in PIGEON dataset
+otu=read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/LNU.in.PIGEON.75.tmean.tsv", delim = "\t", col_names = TRUE)
+# prep data frame
+otu <- col_to_row(otu, "Contig", "contignames")
+# edit column names 
+colnames(otu) <- gsub(pattern=".vib.sI.Trimmed.Mean", replacement = "", x=colnames(otu))
+otu_filtered <- otu %>%
+  filter(rowSums(.) !=0)
+# save RDS file
+saveRDS(otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_PIGEON_otu.RDS")
+```
+
+# extract contig names
+```{r}
+lnu_in_blodgett_PIGEON_otu <- rbind(lnu_in_blodgett_otu, lnu_in_PIGEON_otu)
+
+blodgett_PIGEON_contigs <- rownames(lnu_in_blodgett_PIGEON_otu)
+writeLines(blodgett_PIGEON_contigs, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/blodgett_PIGEON_contigs.txt")
+
+blodgett_contigs <- rownames(lnu_in_blodgett_otu)
+writeLines(blodgett_contigs, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/blodgett_contigs.txt")
+
+PIGEON_contigs <- rownames(lnu_in_PIGEON_otu)
+writeLines(PIGEON_contigs, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/PIGEON_contigs.txt")
+```
+
+# vOTU abundance data for total dataset (clustered with PIGEON and blodgett)
+```{r}
+# LOAD TOTAL ABUNDANCE DATA
+otu=read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/LNU.clustered.Pb.75.tmean.tsv", delim = "\t", col_names = TRUE)
+# prep data frame
+otu <- col_to_row(otu, "Contig", "contignames")
+# edit column names 
+colnames(otu) <- gsub(pattern=".vib.sI.Trimmed.Mean", replacement = "", x=colnames(otu))
+otu_filtered <- otu %>%
+  filter(rowSums(.) !=0)
+# save RDS file
+saveRDS(otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_Pb_otu.RDS")
+```
+
+# VIROME METADATA
+```{r}
+# LNU metadata
+#load mapping data to subset within wildfire dataset 
+#subset mapping data
+wildfire_map <- read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/QuailMcL_Metadata.txt", delim = "\t", col_names = TRUE)
+wildfire_map <- wildfire_map[!(wildfire_map$Virome=="no"),]
+
+# make sure mapping file has sample names (rownames) in ascending order
+wildfire_map <- wildfire_map[order(wildfire_map$ViromeID), ]
+
+# make sure vOTU abundance file has samples names (column names) in ascending order
+otu_filtered <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_Pb_otu.RDS")
+otu_filtered <- otu_filtered[, order(names(otu_filtered))]
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(otu_filtered), wildfire_map$ViromeID)
+
+saveRDS(otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_Pb_otu.RDS")
+saveRDS(wildfire_map, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
+```
+
+# 16S DATA
+```{r}
+# LOAD & CLEAN TAXONOMY DATA
+tax_all <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/tax_all.RDS")
+# Change NAs in taxonomy to "unknown"
+tax_all$Family[is.na(tax_all$Family)] <- "Unknown Family"
+tax_all$Order <- factor(tax_all$Order, levels = c(levels(tax_all$Order), "Unknown Order"))
+tax_all$Order[is.na(tax_all$Order)] <- "Unknown Order"
+# remove mitochondria and chloroplast
+criteria <- !(tax_all$Family == "Mitochondria" | tax_all$Order == "Chloroplast")
+tax_filtered <- tax_all[criteria, ]
+# change Chloroflexi to Chloroflexota
+tax_filtered <- tax_filtered %>%
+  mutate(Phylum = as.character(Phylum)) %>%
+  mutate(Phylum = ifelse(Phylum == "Chloroflexi", "Chloroflexota", Phylum))
+
+saveRDS(tax_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/tax_filtered.RDS")
+
+# LOAD & CLEAN ABUNDANCE DATA
+asv_all <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/asv_all.RDS")
+asv_all <- as.data.frame(asv_all)
+asv_all$OTU_ID <- rownames(asv_all)
+# make sure that asv_all is in the same order as tax_all by OTU_ID (return = TRUE)
+check_column <- "OTU_ID"
+all(asv_all[[check_column]] == tax_all[[check_column]])
+rownames(asv_all) <- NULL
+#remove ASVs that were assigned Mitochondria or Chloroplast
+asv_filtered <- asv_all[!(tax_all$Family=="Mitochondria"),]
+tax_no_mitochondria <- tax_all[!(tax_all$Family=="Mitochondria"),]
+asv_filtered <- asv_filtered[!(tax_no_mitochondria$Order=="Chloroplast"),]
+
+# SELECT FOR Wildfire DATASET
+#load heat mapping data
+all_map=read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/16S_ID.txt", delim = "\t", col_names = TRUE)
+#change SampleID to ID
+colnames(all_map)[colnames(all_map) == "SampleID"] <- "ID"
+#subset Wildfire 16S data
+lnu.asv <- asv_filtered[,all_map$Experiment=="Wildfire"]
+
+# PREP ABUNDANCE DATA
+#do some other things to prep data frame
+rownames(lnu.asv) <- lnu.asv$OTU_ID
+lnu.asv$OTU_ID <- NULL
+# remove rows with just zeroes (73,430 --> 36,399)
+lnu.asv <- lnu.asv[rowSums(lnu.asv>0) >0,]
+# remove singletons (36,399 --> 5,097) 
+lnu.asv <- rmv_sngl(lnu.asv)
+
+saveRDS(lnu.asv, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu.asv.RDS")
+
+# write.csv(lnu.asv, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/16S_rRNA_ASV_Abundance_Table.csv")
+
+#load mapping data to subset within wildfire dataset 
+#subset mapping data
+wildfire_map <- read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/QuailMcL_Metadata.txt", delim = "\t", col_names = TRUE)
+wildfire_map <- wildfire_map[!(wildfire_map$Date=="11/1/2019"),]
+
+# make sure mapping file has sample names (rownames) in ascending order
+wildfire_map <- wildfire_map[order(wildfire_map$ASV_ID), ]
+
+# remove FIRE095 because nothing was present in there
+wildfire_map <- wildfire_map[!(wildfire_map$ASV_ID=="FIRE095"),]
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(lnu.asv), wildfire_map$ASV_ID)
+
+saveRDS(wildfire_map, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_asv_map.RDS")
+```
+

@@ -1,0 +1,234 @@
+---
+title: "Ch2Wildfire_virome"
+output: html_document
+date: "2024-06-18"
+---
+
+# LOAD PACKAGES
+```{r}
+library(tidyverse)
+library(vegan)
+library(lubridate)
+library(dplyr)
+library(ComplexUpset)
+```
+# Read Input Files
+```{r}
+# only read mapping within the LNU dataset (including the natural reserves sites from chaparral and woodland)
+lnu_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_otu.RDS")
+# read mapping after clustering to everything (vOTUs originally found in PIGEON, vOTUs originally found in blodgett, and the LNU dataset)
+lnu_Pb_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_Pb_otu.RDS")
+# abundance of vOTUs originally found in Blodgett
+lnu_in_Blodgett_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_blodgett_otu.RDS")
+# abundance of vOTUs originally found in PIGEON
+lnu_in_PIGEON_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_PIGEON_otu.RDS")
+# metadata
+wildfire_data <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
+```
+
+# PCoA of Entire Dataset
+```{r}
+dfname <- "lnu_Pb_otu"
+df <- get(dfname)
+otu <- rmv_sngl(df)
+otu.rel <- relativize(otu)
+colSums(otu.rel)
+
+otu.dist <- distance(otu.rel)
+otu.pcoa <- pcoa(otu.dist)
+otu.pcoa.points <- pcoa.points(otu.pcoa)
+otu.map <- pcoa.map(otu.pcoa.points, wildfire_data)
+variance(otu.pcoa, 1)
+variance(otu.pcoa, 2)
+
+# Treatment + Habitat
+pcoa.treatment.habitat(otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "10.24% Variance Explained", y_label = "6.61% Variance Explained", title = "LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/lnu_Pb_otu_treatment_habitat.pdf")
+
+# run PERMANOVAs
+variables <- c("Habitat", "Treatment", "Location")
+adonis.results <- run_adonis(variables, otu.dist, otu.map)
+adonis.table <- do.call(rbind, adonis.results)
+```
+
+# SUBSET DATA: Abundance(Remove Singletons & Relativize), Metadata, & Count)
+# Remove 2019 Samples (pf = post fire)
+```{r}
+pf.otu <- lnu_Pb_otu[, wildfire_data$Date!="11/1/2019"] %>%
+  rmv_sngl()
+pf.otu.rel <- relativize(pf.otu)
+colSums(pf.otu.rel)
+pf.map <- subset(wildfire_data, Date!="11/1/2019")
+richness <- colSums(pf.otu.rel > 0)
+pf.map$Richness <- richness
+```
+# Only keep samples that were burned (b = burned)
+```{r}
+b.otu <- lnu_Pb_otu[, wildfire_data$Treatment=="AfterBurn_Wildfire"] %>%
+  rmv_sngl()
+b.otu.rel <- relativize(b.otu)
+colSums(b.otu.rel)
+b.map <- subset(wildfire_data, Treatment=="AfterBurn_Wildfire")
+richness <- colSums(b.otu.rel > 0)
+b.map$Richness <- richness
+```
+# PCoA of Subset Samples
+# PCoA of Post Fire Samples (pf)
+```{r}
+pf.otu.dist <- distance(pf.otu.rel)
+pf.otu.pcoa <- pcoa(pf.otu.dist)
+pf.otu.pcoa.points <- pcoa.points(pf.otu.pcoa)
+pf.otu.map <- pcoa.map(pf.otu.pcoa.points, pf.map)
+variance(pf.otu.pcoa, 1)
+variance(pf.otu.pcoa, 2)
+pcoa.treatment.habitat(pf.otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "11.62% Variance Explained", y_label = "7.98% Variance Explained", title = "Post-Fire LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/pf_lnu_Pb_otu_treatment_habitat.pdf")
+pcoa.treatment.location(pf.otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Location, x_label = "11.62% Variance Explained", y_label = "7.98% Variance Explained", title = "Post-Fire LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/pf_lnu_Pb_otu_treatment_location.pdf")
+# run PERMANOVAs
+variables <- c("Habitat", "Treatment", "Location")
+pf.adonis.results <- run_adonis(variables, pf.otu.dist, pf.otu.map)
+pf.adonis.table <- do.call(rbind, pf.adonis.results)
+```
+# PCoA of Burned Samples Only (b)
+```{r}
+b.otu.dist <- distance(b.otu.rel)
+b.otu.pcoa <- pcoa(b.otu.dist)
+b.otu.pcoa.points <- pcoa.points(b.otu.pcoa)
+b.otu.map <- pcoa.map(b.otu.pcoa.points, b.map)
+variance(b.otu.pcoa, 1)
+variance(b.otu.pcoa, 2)
+pcoa.habitat.location(b.otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Habitat, shape_col = Location, x_label = "12.65% Variance Explained", y_label = "9.27% Variance Explained", title = "Post-Fire, Burned LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/b_lnu_Pb_otu_habitat_location.pdf")
+# run PERMANOVAs
+variables <- c("Habitat", "Location")
+b.adonis.results <- run_adonis(variables, b.otu.dist, b.otu.map)
+b.adonis.table <- do.call(rbind, b.adonis.results)
+```
+
+# Upset Plot of All Samples
+```{r}
+# Habitat
+map <- wildfire_data
+cbbmap <- map %>%
+  filter(Date=="11/1/2019"&Habitat=="Chaparral")
+wbbmap <- map %>%
+  filter(Date=="11/1/2019"&Habitat=="Woodland")
+cabmap <- map %>%
+  filter(Treatment=="AfterBurn_Wildfire"&Habitat=="Chaparral")
+wabmap <- map %>%
+  filter(Treatment=="AfterBurn_Wildfire"&Habitat=="Woodland")
+cacmap <- map %>%
+  filter(Treatment=="AfterBurn_Control"&Habitat=="Chaparral")
+wacmap <- map %>%
+  filter(Treatment=="AfterBurn_Control"&Habitat=="Woodland")
+
+upset <- otu.rel
+Chaparral_BeforeBurn <- upset[,colnames(upset)%in%cbbmap$ViromeID]
+Woodland_BeforeBurn <- upset[,colnames(upset)%in%wbbmap$ViromeID]
+Chaparral_AfterBurn <- upset[,colnames(upset)%in%cabmap$ViromeID]
+Woodland_AfterBurn <- upset[,colnames(upset)%in%wabmap$ViromeID]
+Chaparral_AfterControl <- upset[,colnames(upset)%in%cacmap$ViromeID]
+Woodland_AfterControl <- upset[,colnames(upset)%in%wacmap$ViromeID]
+
+Chaparral_BeforeBurn_pa <- rowSums(Chaparral_BeforeBurn)>0  
+Woodland_BeforeBurn_pa <- rowSums(Woodland_BeforeBurn) >0
+Chaparral_AfterBurn_pa <- rowSums(Chaparral_AfterBurn)>0  
+Woodland_AfterBurn_pa <- rowSums(Woodland_AfterBurn) >0
+Chaparral_AfterControl_pa <- rowSums(Chaparral_AfterControl)>0  
+Woodland_AfterControl_pa <- rowSums(Woodland_AfterControl) >0
+
+upsetdata <- data.frame(Chaparral_BeforeBurn=Chaparral_BeforeBurn_pa, Woodland_BeforeBurn=Woodland_BeforeBurn_pa, Chaparral_AfterBurn=Chaparral_AfterBurn_pa, Woodland_AfterBurn=Woodland_AfterBurn_pa, Chaparral_AfterControl=Chaparral_AfterControl_pa, Woodland_AfterControl=Woodland_AfterControl_pa)
+# plot
+
+upset(data = upsetdata, intersect = c("Woodland_BeforeBurn","Woodland_AfterControl","Woodland_AfterBurn", "Chaparral_BeforeBurn","Chaparral_AfterControl","Chaparral_AfterBurn"), 
+  name="vOTU Presence in Viromes by Habitat and Disturbance",
+      base_annotations = list('Intersection size'=intersection_size(
+        text=list(hjust=-0.05, vjust=0.5, angle = 90))),
+      min_size = 4,
+      width_ratio = 0.125,
+      themes=upset_default_themes(text=element_text(size = 20)),
+      sort_sets=FALSE,
+      set_sizes=(upset_set_size()+theme(axis.text.x = element_text(angle=90))),
+      stripes=upset_stripes(colors=c('yellowgreen','yellowgreen','yellowgreen','mediumseagreen','mediumseagreen','mediumseagreen')))
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Upset/Habitat_Disturbance_upset.pdf", width = 300, height = 200, units = "mm", dpi = 500)
+```
+
+# Identifying source of vOTUs originally found in other datasets
+```{r}
+LNU_contigs <- rownames(lnu_otu)
+LNU_contigs <- data.frame(vOTU = LNU_contigs, Source = "LNU")
+LNU_contigs <- LNU_contigs %>%
+  mutate(ViromeID = str_extract(vOTU, "^[^_]+(?:_[^_]+)*(?=_contig)"))
+LNU_habitat <- wildfire_data %>%
+  select(ViromeID, Habitat)
+LNU_contigs <- LNU_contigs %>%
+  left_join(LNU_habitat, by = "ViromeID")
+
+Blodgett_contigs <- rownames(lnu_in_Blodgett_otu)
+Blodgett_contigs <- data.frame(vOTU = Blodgett_contigs, Source = "Blodgett", Habitat = "mixedconifer_forest")
+Blodgett_contigs <- Blodgett_contigs %>%
+  mutate(ViromeID = str_extract(vOTU, "^[^_]+(?:_[^_]+)*(?=_contig)"))
+
+Pigeon_contigs <- rownames(lnu_in_PIGEON_otu)
+Pigeon_contigs <- data.frame(vOTU=Pigeon_contigs, Source = "PIGEON")
+
+prefix_to_database <- function(vOTU) {
+  case_when(
+    str_sub(vOTU, 1, 9) == "almond_CA" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 18) == "RR_tom_rhizo_2021_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 8) == "BB_2021_" ~ "wetland",
+    str_sub(vOTU, 1, 8) == "RR_2018_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 20) == "Hopland_2021_Santos_" ~ "grassland",
+    str_sub(vOTU, 1, 13) == "coutinho_2020" ~ "lake",
+    str_sub(vOTU, 1, 8) == "biochar_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 12) == "Sorensen2021" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 12) == "citrus_rhizo" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 21) == "natural_reserves_2019" ~ "natural_soil",
+    str_sub(vOTU, 1, 3) == "EV_" ~ "varies",
+    str_sub(vOTU, 1, 11) == "RR_6_8_frac" ~ "tropical_rainforest",
+    str_sub(vOTU, 1, 7) == "SPRUCE_" ~ "peat",
+    str_sub(vOTU, 1, 11) == "1_RHIZ_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 11) == "2_RHIZ_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 11) == "3_RHIZ_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 11) == "4_RHIZ_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 9) == "1_BU_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 9) == "2_BU_ALM_" ~ "agricultural_soil",
+    TRUE ~ "unknown" # Default value if the prefix does not match any known database
+  )
+}
+
+Pigeon_contigs <- Pigeon_contigs %>%
+  mutate(Habitat = prefix_to_database(vOTU))
+
+Pigeon_contigs <- Pigeon_contigs %>%
+  mutate(ViromeID = str_extract(sample_name, pattern) %>% 
+                      str_replace(pattern, "\\1"))
+
+Pigeon_contigs$Habitat <- as.factor(Pigeon_contigs$Habitat)
+levels(Pigeon_contigs$Habitat)
+
+NatRsv_contigs <- Pigeon_contigs[Pigeon_contigs$Habitat=="natural_soil",]
+pattern <- "natural_reserves_2019_([^_]+_[^_]+_[^_]+)_S"
+NatRsv_contigs <- NatRsv_contigs %>%
+  mutate(ViromeID = str_extract(vOTU, pattern) %>% 
+                      str_replace(pattern, "\\1"))
+NatRsv_habitat=read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/natrsv_habitat.txt", delim = "\t", col_names = TRUE)
+NatRsv_contigs <- NatRsv_contigs %>%
+  left_join(NatRsv_habitat, by = "ViromeID")
+
+NatRsv_contigs$Habitat.y[NatRsv_contigs$vOTU == "natural_reserves_2019_VIRSorter_QR_1_2_S75_170-circular-cat_2"] <- "Chaparral"
+NatRsv_contigs$Habitat.y[NatRsv_contigs$vOTU == "natural_reserves_2019_VIRSorter_QR_1_2_S75_84-cat_2"] <- "Chaparral"
+NatRsv_contigs$Habitat.y[NatRsv_contigs$vOTU == "natural_reserves_2019_VIRSorter_McL_3_1_S30_225-cat_2"] <- "grassland"
+NatRsv_contigs$Habitat.y[NatRsv_contigs$vOTU == "natural_reserves_2019_VIRSorter_McL_1_2_S78_59-cat_2"] <- "Woodland"
+
+NatRsv_contigs <- NatRsv_contigs %>%
+  select(-Habitat.x) %>%
+  rename(Habitat = Habitat.y)
+
+Pigeon_contigs <- Pigeon_contigs[Pigeon_contigs$Habitat!="natural_soil",]
+Pigeon_contigs <- Pigeon_contigs %>%
+  mutate(ViromeID = NA)
+
+all_contigs <- bind_rows(Pigeon_contigs,NatRsv_contigs,Blodgett_contigs,LNU_contigs)
+  
+saveRDS(blodgett_all_contigs, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch2Blodgett/R_Figures/rds/blodgett_all_contigs.RDS")
+trendgroup_contigs=readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch1SoilHeating/R_Figures/rds/trendgroup_contigs.RDS")
+```
+

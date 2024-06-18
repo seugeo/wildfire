@@ -1,0 +1,127 @@
+---
+title: "General Functions"
+output: html_document
+date: "2024-06-17"
+---
+
+```{r}
+# CUSTOM COLOR PALETTE & ORDERS
+  Treatment_Color <- c("skyblue", "royalblue", "darkorange")
+  Treatment_Order <- c('Before Burn', 'AfterBurn_Control', 'AfterBurn_Wildfire')
+  Habitat_Color <- c("yellowgreen", "mediumseagreen")
+  Habitat_Order <- c('Chaparral', 'Woodland')
+
+# DATA PREPARATION
+# CONVERT COLUMN TO ROWNAMES # make sure to put "" around col and name_values
+col_to_row <- function(data, col, name_values) {
+  # assign reference value to column
+  name_values = data[[col]]
+  # remove whatever column
+  data=data%>%
+    select(-{{col}})
+  # convert to data frame
+  data=data.frame(data)
+  # assign row names (first column) to specified name
+  row.names(data)=name_values
+return(data)}
+# REMOVE SINGLETONS (only appears in one sample)
+rmv_sngl <- function(data) {
+  data <- data[rowSums(data>0) >1,]
+  data <- data[, colSums(data)>0]
+return(data)}
+# RELATIVIZE
+relativize <- function(data) {
+  data.rel=decostand(data, method = "total", MARGIN = 2)
+return(data.rel)}
+
+# FOR PCOA PLOT
+# CALCULATE DISTANCE MATRIX
+distance <- function(data.rel) {
+  data.dist=vegdist(t(data.rel), method = "bray")
+return(data.dist)}
+# CALCULATE PCOA POINTS
+pcoa <- function(data.dist) {
+  data.pcoa=cmdscale(data.dist, eig = TRUE)
+return(data.pcoa)}
+# CREATE DATA FRAME WITH PCOA POINTS
+pcoa.points <- function(data.pcoa) {
+  data.pcoa.points=data.frame(data.pcoa$points)
+  colnames(data.pcoa.points)=c("pcoa1", "pcoa2")
+return(data.pcoa.points)}
+# JOIN METADATA AND PCOA DATA
+pcoa.map <- function(data.pcoa.points,map) {
+  data.pcoa.points$ViromeID <- rownames(data.pcoa.points)
+  data.map=left_join(data.pcoa.points,map,by="ViromeID")
+return(data.map)}
+# RUN PERMANOVAS ON ALL VARIABLES DISTINCTLY AND GET A SUMMARY TABLE
+run_adonis <- function(variables, diss_matrix, data) {
+  results <- lapply(variables, function(var){
+    formula <- as.formula(paste("diss_matrix ~", var))
+    adonis_result <- adonis(formula, data = data)
+  return(adonis_result$aov.tab)})
+return(results)}
+# CALCULATE VARIANCE EXPLAINED
+variance <- function(data.pcoa, x) {
+  data.pcoa$eig[x]/sum(data.pcoa$eig)}
+# PCOA PLOT w/ color=Treatment and shape=Habitat
+pcoa.treatment.habitat <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  scale_color_manual(values=Treatment_Color, limits=Treatment_Order) +
+  #scale_shape_manual(values=date_shapes, limits=date_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 16)) +
+  theme(legend.text = element_text(size = 16), legend.position = "right") +
+  theme(legend.title = element_text(size = 16)) +
+  theme(axis.text = element_text(size = 16)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  p + guides(fill = guide_legend(title.position = "top", ncol = 2))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+# PCOA PLOT w/ color=Treatment and shape=Location
+pcoa.treatment.location <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  scale_color_manual(values=Treatment_Color, limits=Treatment_Order) +
+  #scale_shape_manual(values=date_shapes, limits=date_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 16)) +
+  theme(legend.text = element_text(size = 16), legend.position = "right") +
+  theme(legend.title = element_text(size = 16)) +
+  theme(axis.text = element_text(size = 16)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  p + guides(fill = guide_legend(title.position = "top", ncol = 2))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+# PCOA PLOT w/ color=Habitat and shape=Location
+pcoa.habitat.location <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  scale_color_manual(values=Habitat_Color, limits=Habitat_Order) +
+  #scale_shape_manual(values=date_shapes, limits=date_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 16)) +
+  theme(legend.text = element_text(size = 16), legend.position = "right") +
+  theme(legend.title = element_text(size = 16)) +
+  theme(axis.text = element_text(size = 16)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  p + guides(fill = guide_legend(title.position = "top", ncol = 2))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+```
+
