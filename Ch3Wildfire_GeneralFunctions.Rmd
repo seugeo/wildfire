@@ -10,7 +10,15 @@ date: "2024-06-17"
   Treatment_Order <- c('Before Burn', 'AfterBurn_Control', 'AfterBurn_Wildfire')
   Habitat_Color <- c("yellowgreen", "mediumseagreen")
   Habitat_Order <- c('Chaparral', 'Woodland')
+  collapsed_phylum_colors <- c("Acidobacteriota" = "#7526C3", "Actinobacteriota" = "#75d644", "Altarchaeota" = "#F9D3D7","Bacteroidota" = "#FAE500", "Bdellovibrionota" = "#0026F9", "Chloroflexota" = "#2665A1", "Cyanobacteria" = "#1CFEDA", "Desulfobacterota" = "#6C328B", "Firmicutes" = "#2ead57", "Gemmatimonadota" = "#84530D", "Halobacteriota" = "#B6EBEF", "Methanobacteriota" = "#CBC279", "Myxococcota" = "#FF942E", "Nitrospirota" = "#909AFE", "Patescibacteria" = "#22CBFD", "Planctomycetota" =  "#fa4668", "Proteobacteria" = "#D78EFC", "Verrucomicrobiota" = "#FE9B95", "mixed" = "purple", "Other" = "darkgray")
+  collapsed_phyla_order <- c("Acidobacteriota", "Actinobacteriota", "Altarchaeota", "Bacteroidota", "Bdellovibrionota", "Chloroflexota", "Cyanobacteria", "Desulfobacterota", "Firmicutes", "Gemmatimonadota", "Halobacteriota", "Methanobacteriota", "Myxococcota", "Nitrospirota", "Patescibacteria", "Planctomycetota", "Proteobacteria", "Verrucomicrobiota", "mixed", "Other")
 
+  
+  
+"Acidobacteriota" "Actinobacteriota" "Bacteroidota" "Cyanobacteria" "Firmicutes" "Gemmatimonadota" "Myxococcota" "Nitrospirota" "Proteobacteria" "mixed" "Other"
+  
+
+  
 # DATA PREPARATION
 # CONVERT COLUMN TO ROWNAMES # make sure to put "" around col and name_values
 col_to_row <- function(data, col, name_values) {
@@ -123,5 +131,17 @@ pcoa.habitat.location <- function(data.map, x_col, y_col, color_col, shape_col, 
   if(!is.null(filename)) {
     ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
 return(p)}
+
+# Z-TRANSFORMED MATRIX FOR ENVIRONMENTAL DATA
+nutmtx <- function(chem) {
+  nut.mtx <- chem %>%
+    gather(key = "Variable", value = "Value", -ViromeID) %>%
+    group_by(Variable) %>%
+    mutate(zValue = (Value - mean(Value))/sd(Value)) %>% 
+    select(ViromeID, Variable, zValue) %>% 
+    spread(key = Variable, value = zValue) %>% 
+    as.data.frame()
+row.names(nut.mtx) <- nut.mtx$ViromeID
+return(nut.mtx)}
 ```
 

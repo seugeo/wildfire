@@ -93,10 +93,17 @@ wildfire_map <- wildfire_map[order(wildfire_map$ViromeID), ]
 otu_filtered <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_Pb_otu.RDS")
 otu_filtered <- otu_filtered[, order(names(otu_filtered))]
 
+# make sure vOTU abundance file has samples names (column names) in ascending order
+lnu_otu_filtered <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_otu.RDS")
+lnu_otu_filtered <- lnu_otu_filtered[, order(names(lnu_otu_filtered))]
+
 # make sure IDs are identical in abundance and metadata tables
 identical(colnames(otu_filtered), wildfire_map$ViromeID)
+identical(colnames(lnu_otu_filtered), wildfire_map$ViromeID)
+
 
 saveRDS(otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_Pb_otu.RDS")
+saveRDS(lnu_otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_otu.RDS")
 saveRDS(wildfire_map, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
 ```
 
