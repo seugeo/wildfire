@@ -8,17 +8,15 @@ date: "2024-06-17"
 # CUSTOM COLOR PALETTE & ORDERS
   Treatment_Color <- c("skyblue", "royalblue", "darkorange")
   Treatment_Order <- c('Before Burn', 'AfterBurn_Control', 'AfterBurn_Wildfire')
-  Habitat_Color <- c("yellowgreen", "mediumseagreen")
+  Treatment_20_Color <- c("royalblue", "darkorange")
+  Treatment_20_Order <- c('AfterBurn_Control', 'AfterBurn_Wildfire')
+  pf_treatment_color <- c("royalblue", "darkorange")
+  pf_treatment_order <- c('AfterBurn_Control', 'AfterBurn_Wildfire')
+  Habitat_Color <- c("goldenrod1", "#39A96B")
   Habitat_Order <- c('Chaparral', 'Woodland')
-  collapsed_phylum_colors <- c("Acidobacteriota" = "#7526C3", "Actinobacteriota" = "#75d644", "Altarchaeota" = "#F9D3D7","Bacteroidota" = "#FAE500", "Bdellovibrionota" = "#0026F9", "Chloroflexota" = "#2665A1", "Cyanobacteria" = "#1CFEDA", "Desulfobacterota" = "#6C328B", "Firmicutes" = "#2ead57", "Gemmatimonadota" = "#84530D", "Halobacteriota" = "#B6EBEF", "Methanobacteriota" = "#CBC279", "Myxococcota" = "#FF942E", "Nitrospirota" = "#909AFE", "Patescibacteria" = "#22CBFD", "Planctomycetota" =  "#fa4668", "Proteobacteria" = "#D78EFC", "Verrucomicrobiota" = "#FE9B95", "mixed" = "purple", "Other" = "darkgray")
-  collapsed_phyla_order <- c("Acidobacteriota", "Actinobacteriota", "Altarchaeota", "Bacteroidota", "Bdellovibrionota", "Chloroflexota", "Cyanobacteria", "Desulfobacterota", "Firmicutes", "Gemmatimonadota", "Halobacteriota", "Methanobacteriota", "Myxococcota", "Nitrospirota", "Patescibacteria", "Planctomycetota", "Proteobacteria", "Verrucomicrobiota", "mixed", "Other")
+  collapsed_phylum_colors <- c("Acidobacteriota" = "#7526C3", "Actinobacteriota" = "#75d644", "Altarchaeota" = "#F9D3D7","Bacteroidota" = "#FAE500", "Bdellovibrionota" = "#0026F9", "Chloroflexota" = "#2665A1", "Crenarchaeota" = "#000000", "Cyanobacteria" = "#1CFEDA", "Desulfobacterota" = "#6C328B", "Firmicutes" = "#2ead57", "Gemmatimonadota" = "#84530D", "Halobacteriota" = "#B6EBEF", "Methanobacteriota" = "#CBC279", "Myxococcota" = "#FF942E", "Nitrospirota" = "#909AFE", "Patescibacteria" = "#22CBFD", "Planctomycetota" =  "#fa4668", "Proteobacteria" = "#D78EFC", "Verrucomicrobiota" = "#FE9B95", "mixed" = "purple", "Other" = "darkgray")
+  collapsed_phyla_order <- c("Acidobacteriota", "Actinobacteriota", "Altarchaeota", "Bacteroidota", "Bdellovibrionota", "Chloroflexota", "Crenarchaeota", "Cyanobacteria", "Desulfobacterota", "Firmicutes", "Gemmatimonadota", "Halobacteriota", "Methanobacteriota", "Myxococcota", "Nitrospirota", "Patescibacteria", "Planctomycetota", "Proteobacteria", "Verrucomicrobiota", "mixed", "Other")
 
-  
-  
-"Acidobacteriota" "Actinobacteriota" "Bacteroidota" "Cyanobacteria" "Firmicutes" "Gemmatimonadota" "Myxococcota" "Nitrospirota" "Proteobacteria" "mixed" "Other"
-  
-
-  
 # DATA PREPARATION
 # CONVERT COLUMN TO ROWNAMES # make sure to put "" around col and name_values
 col_to_row <- function(data, col, name_values) {
@@ -56,10 +54,15 @@ pcoa.points <- function(data.pcoa) {
   data.pcoa.points=data.frame(data.pcoa$points)
   colnames(data.pcoa.points)=c("pcoa1", "pcoa2")
 return(data.pcoa.points)}
-# JOIN METADATA AND PCOA DATA
+# JOIN METADATA AND PCOA DATA (vOTUs)
 pcoa.map <- function(data.pcoa.points,map) {
   data.pcoa.points$ViromeID <- rownames(data.pcoa.points)
   data.map=left_join(data.pcoa.points,map,by="ViromeID")
+return(data.map)}
+# JOIN METADATA AND PCOA DATA (ASVs)
+pcoa.map.asv <- function(data.pcoa.points,map) {
+  data.pcoa.points$ASV_ID <- rownames(data.pcoa.points)
+  data.map=left_join(data.pcoa.points,map,by="ASV_ID")
 return(data.map)}
 # RUN PERMANOVAS ON ALL VARIABLES DISTINCTLY AND GET A SUMMARY TABLE
 run_adonis <- function(variables, diss_matrix, data) {
@@ -132,6 +135,27 @@ pcoa.habitat.location <- function(data.map, x_col, y_col, color_col, shape_col, 
     ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
 return(p)}
 
+# PCOA PLOT w/ color=Treatment and shape=TimePoint
+pcoa.treatment.time <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  scale_color_manual(values=Treatment_Color, limits=Treatment_Order) +
+  #scale_shape_manual(values=date_shapes, limits=date_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 16)) +
+  theme(legend.text = element_text(size = 16), legend.position = "right") +
+  theme(legend.title = element_text(size = 16)) +
+  theme(axis.text = element_text(size = 16)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  p + guides(fill = guide_legend(title.position = "top", ncol = 2))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+
 # Z-TRANSFORMED MATRIX FOR ENVIRONMENTAL DATA
 nutmtx <- function(chem) {
   nut.mtx <- chem %>%
@@ -143,5 +167,13 @@ nutmtx <- function(chem) {
     as.data.frame()
 row.names(nut.mtx) <- nut.mtx$ViromeID
 return(nut.mtx)}
+# CALCULATE VARIANCE EXPLAINED
+pcavariance <- function(data.pca, x) {
+  data.pca$eig[x]/sum(data.pca$eig)}
+# JOIN METADATA AND PCA DATA
+pca.map <- function(data.pca.points,map) {
+  data.pca.points$ViromeID <- rownames(data.pca.points)
+  data.map=left_join(data.pca.points,map,by="ViromeID")
+return(data.map)}
 ```
 

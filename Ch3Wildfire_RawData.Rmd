@@ -107,6 +107,18 @@ saveRDS(lnu_otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfi
 saveRDS(wildfire_map, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
 ```
 
+# Virome DNA Yields
+```{r}
+wildfire_DNA <- read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/QuailMcL_Metadata.txt", delim = "\t", col_names = TRUE)
+
+# Remove TimePoint 0 (T0)
+wildfire_DNA <- wildfire_DNA[!(wildfire_DNA$TimePoint=="T0"),]
+
+saveRDS(wildfire_DNA, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_DNA.RDS")
+
+```
+
+
 # 16S DATA
 ```{r}
 # LOAD & CLEAN TAXONOMY DATA
@@ -129,7 +141,7 @@ saveRDS(tax_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R
 asv_all <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/asv_all.RDS")
 asv_all <- as.data.frame(asv_all)
 asv_all$OTU_ID <- rownames(asv_all)
-# make sure that asv_all is in the same order as tax_all by OTU_ID (return = TRUE)
+# make sure that asv_all is in the same order as tax_all by ASV_ID (return = TRUE)
 check_column <- "OTU_ID"
 all(asv_all[[check_column]] == tax_all[[check_column]])
 rownames(asv_all) <- NULL
@@ -143,13 +155,15 @@ asv_filtered <- asv_filtered[!(tax_no_mitochondria$Order=="Chloroplast"),]
 all_map=read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/16S_ID.txt", delim = "\t", col_names = TRUE)
 #change SampleID to ID
 colnames(all_map)[colnames(all_map) == "SampleID"] <- "ID"
+# remove OTU_ID column and make it the rownames
+rownames(asv_filtered) <- asv_filtered$OTU_ID
+asv_filtered$OTU_ID <- NULL
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(asv_filtered), all_map$ID)
 #subset Wildfire 16S data
 lnu.asv <- asv_filtered[,all_map$Experiment=="Wildfire"]
 
 # PREP ABUNDANCE DATA
-#do some other things to prep data frame
-rownames(lnu.asv) <- lnu.asv$OTU_ID
-lnu.asv$OTU_ID <- NULL
 # remove rows with just zeroes (73,430 --> 36,399)
 lnu.asv <- lnu.asv[rowSums(lnu.asv>0) >0,]
 # remove singletons (36,399 --> 5,097) 
@@ -167,6 +181,9 @@ wildfire_map <- wildfire_map[!(wildfire_map$Date=="11/1/2019"),]
 # make sure mapping file has sample names (rownames) in ascending order
 wildfire_map <- wildfire_map[order(wildfire_map$ASV_ID), ]
 
+wildfire_map_095 <- wildfire_map
+saveRDS(wildfire_map_095, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/wildfire_map_095.RDS")
+
 # remove FIRE095 because nothing was present in there
 wildfire_map <- wildfire_map[!(wildfire_map$ASV_ID=="FIRE095"),]
 
@@ -174,5 +191,26 @@ wildfire_map <- wildfire_map[!(wildfire_map$ASV_ID=="FIRE095"),]
 identical(colnames(lnu.asv), wildfire_map$ASV_ID)
 
 saveRDS(wildfire_map, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_asv_map.RDS")
+```
+
+# Environmental Data
+```{r}
+# Upload Physicochemical Data
+chem_wildfire=read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/lnu_env_data.csv", delim = ",", col_names = TRUE)
+
+chem_wildfire <- chem_wildfire %>%
+  left_join(wildfire_map %>% select(TotalDNAID, ASV_ID), by = "TotalDNAID")
+
+chem_wildfire <- chem_wildfire %>%
+  mutate(Timepoint = case_when(
+    Date == "1/13/2021" ~ "T1",
+    Date == "3/11/2021" ~ "T2",
+    Date == "3/12/2021" ~ "T2",
+    Date == "5/16/2021" ~ "T3",
+    Date == "5/17/2021" ~ "T3",
+    Date == "8/10/2021" ~ "T4", 
+    Date == "8/9/2021" ~ "T4"))
+
+saveRDS(chem_wildfire, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/chem_wildfire.RDS")
 ```
 

@@ -26,6 +26,79 @@ lnu_in_PIGEON_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wil
 wildfire_data <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
 ```
 
+# DNA Yields
+```{r}
+wildfire_DNA <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_DNA.RDS")
+
+# replacing NA with "0" - the bottom of threshold
+DNA_NA_0 <- wildfire_DNA
+DNA_NA_0[is.na(DNA_NA_0)] <- 0
+ggplot(DNA_NA_0, aes(x = TimePoint, y = DNA, fill = Treatment)) +
+  geom_boxplot(width = 0.5, outlier.shape=NA, position = position_dodge(width = 0.75)) +
+  geom_jitter(aes(color = Habitat), position = position_jitter(width = 0.05), size = 1.5) +
+  xlab("Timepoint") +
+  ylab("DNA Yield (ng)") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16)) +
+  theme(legend.position = "bottom", legend.text = element_text(size=16), legend.title = element_text(size=16)) +
+  theme(axis.text = element_text(size = 16)) +
+  scale_color_manual(values = Habitat_Color) +
+  scale_fill_manual(values = Treatment_20_Color) +
+  facet_wrap(~ Treatment)
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/BoxPlot/LNU_DNA_NA_0.pdf", width = 200, height = 120, units = "mm", dpi = 500)
+
+# stats on DNA yield 
+# this is where the NA values are replaced with a 0
+DNA_NA_0.stats <- DNA_NA_0
+DNA_NA_0_c_ctrl <- DNA_NA_0.stats %>%
+  filter(Habitat == "Chaparral"&Treatment == "AfterBurn_Control")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0_c_ctrl)
+DNA_NA_0_c_burn <- DNA_NA_0.stats %>%
+  filter(Habitat == "Chaparral"&Treatment == "AfterBurn_Wildfire")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0_c_burn)
+DNA_NA_0_w_ctrl <- DNA_NA_0.stats %>%
+  filter(Habitat == "Woodland"&Treatment == "AfterBurn_Control")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0_w_ctrl)
+DNA_NA_0_w_burn <- DNA_NA_0.stats %>%
+  filter(Habitat == "Woodland"&Treatment == "AfterBurn_Wildfire")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0_w_burn)
+
+# replacing NA with "0.1" - the top of threshold
+DNA_NA_0.1 <- wildfire_DNA
+DNA_NA_0.1[is.na(DNA_NA_0.1)] <- 0.1
+ggplot(DNA_NA_0.1, aes(x = TimePoint, y = DNA, fill = Treatment)) +
+  geom_boxplot(width = 0.5, outlier.shape=NA, position = position_dodge(width = 0.75)) +
+  geom_jitter(aes(color = Habitat), position = position_jitter(width = 0.05), size = 1.5) +
+  xlab("Timepoint") +
+  ylab("DNA Yield (ng)") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 16)) +
+  theme(legend.position = "bottom", legend.text = element_text(size=16), legend.title = element_text(size=16)) +
+  theme(axis.text = element_text(size = 16)) +
+  scale_color_manual(values = Habitat_Color) +
+  scale_fill_manual(values = Treatment_20_Color) +
+  facet_wrap(~ Treatment)
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/BoxPlot/LNU_DNA_NA_0.1.pdf", width = 200, height = 120, units = "mm", dpi = 500)
+
+# stats on DNA yield 
+# this is where the NA values are replaced with a 0.1
+DNA_NA_0.1.stats <- DNA_NA_0.1
+DNA_NA_0.1_c_ctrl <- DNA_NA_0.1.stats %>%
+  filter(Habitat == "Chaparral"&Treatment == "AfterBurn_Control")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0.1_c_ctrl)
+DNA_NA_0.1_c_burn <- DNA_NA_0.1.stats %>%
+  filter(Habitat == "Chaparral"&Treatment == "AfterBurn_Wildfire")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0.1_c_burn)
+DNA_NA_0.1_w_ctrl <- DNA_NA_0.1.stats %>%
+  filter(Habitat == "Woodland"&Treatment == "AfterBurn_Control")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0.1_w_ctrl)
+DNA_NA_0.1_w_burn <- DNA_NA_0.1.stats %>%
+  filter(Habitat == "Woodland"&Treatment == "AfterBurn_Wildfire")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0.1_w_burn)
+```
+
 # PCoA of Entire Dataset
 ```{r}
 dfname <- "lnu_Pb_otu"
@@ -42,7 +115,7 @@ variance(otu.pcoa, 1)
 variance(otu.pcoa, 2)
 
 # Treatment + Habitat
-pcoa.treatment.habitat(otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "10.24% Variance Explained", y_label = "6.61% Variance Explained", title = "LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/lnu_Pb_otu_treatment_habitat.pdf")
+pcoa.treatment.habitat(otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "10.24% Variance Explained", y_label = "6.61% Variance Explained", title = "LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/lnu_Pb_otu_treatment_habitat.pdf")
 
 # run PERMANOVAs
 variables <- c("Habitat", "Treatment", "Location")
@@ -65,7 +138,7 @@ variance(otu.pcoa, 1)
 variance(otu.pcoa, 2)
 
 # Treatment + Habitat
-pcoa.treatment.habitat(otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "9.91% Variance Explained", y_label = "6.55% Variance Explained", title = "LNU Viromes (clustered alone)", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/lnu_otu_treatment_habitat.pdf")
+pcoa.treatment.habitat(otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "9.91% Variance Explained", y_label = "6.55% Variance Explained", title = "LNU Viromes (clustered alone)", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/lnu_otu_treatment_habitat.pdf")
 
 # run PERMANOVAs
 variables <- c("Habitat", "Treatment", "Location")
@@ -123,13 +196,14 @@ identical(colnames(wo.otu.rel), wo.map$ViromeID)
 # PCoA of Post Fire Samples (pf)
 ```{r}
 pf.otu.dist <- distance(pf.otu.rel)
+saveRDS(pf.otu.dist, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/pf.otu.dist.RDS")
 pf.otu.pcoa <- pcoa(pf.otu.dist)
 pf.otu.pcoa.points <- pcoa.points(pf.otu.pcoa)
 pf.otu.map <- pcoa.map(pf.otu.pcoa.points, pf.map)
 variance(pf.otu.pcoa, 1)
 variance(pf.otu.pcoa, 2)
-pcoa.treatment.habitat(pf.otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "11.62% Variance Explained", y_label = "7.98% Variance Explained", title = "Post-Fire LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/pf_lnu_Pb_otu_treatment_habitat.pdf")
-pcoa.treatment.location(pf.otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Location, x_label = "11.62% Variance Explained", y_label = "7.98% Variance Explained", title = "Post-Fire LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/pf_lnu_Pb_otu_treatment_location.pdf")
+pcoa.treatment.habitat(pf.otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "11.62% Variance Explained", y_label = "7.98% Variance Explained", title = "Post-Fire LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/pf_lnu_Pb_otu_treatment_habitat.pdf")
+pcoa.treatment.location(pf.otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Location, x_label = "11.62% Variance Explained", y_label = "7.98% Variance Explained", title = "Post-Fire LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/pf_lnu_Pb_otu_treatment_location.pdf")
 # run PERMANOVAs
 variables <- c("Habitat", "Treatment", "Location")
 pf.adonis.results <- run_adonis(variables, pf.otu.dist, pf.otu.map)
@@ -143,11 +217,144 @@ b.otu.pcoa.points <- pcoa.points(b.otu.pcoa)
 b.otu.map <- pcoa.map(b.otu.pcoa.points, b.map)
 variance(b.otu.pcoa, 1)
 variance(b.otu.pcoa, 2)
-pcoa.habitat.location(b.otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Habitat, shape_col = Location, x_label = "12.65% Variance Explained", y_label = "9.27% Variance Explained", title = "Post-Fire, Burned LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/b_lnu_Pb_otu_habitat_location.pdf")
+pcoa.habitat.location(b.otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Habitat, shape_col = Location, x_label = "12.65% Variance Explained", y_label = "9.27% Variance Explained", title = "Post-Fire, Burned LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/b_lnu_Pb_otu_habitat_location.pdf")
 # run PERMANOVAs
 variables <- c("Habitat", "Location")
 b.adonis.results <- run_adonis(variables, b.otu.dist, b.otu.map)
 b.adonis.table <- do.call(rbind, b.adonis.results)
+```
+# NMDS of Post Fire Samples (pf)
+```{r}
+pf.otu.dist <- distance(pf.otu.rel)
+
+set.seed(1)
+pf.nmds <- metaMDS(pf.otu.dist)
+pf.nmds$points
+plot(pf.nmds)
+
+scores(pf.nmds) %>%
+  as_tibble(rownames="ViromeID") %>%
+  inner_join(., pf.map, by="ViromeID") %>%
+  ggplot(aes(x=NMDS1, y=NMDS2, shape=Habitat))+
+  geom_point()+
+  geom_text(aes(label= ViromeID))+
+  ggtitle("NMDS Plot of Habitat in Post-Fire Plots, Stress = 0.12")+
+  theme_minimal()
+
+pf.nut.mtx <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/w.nut.mtx.RDS")
+
+pf.nut.mtx <- as.data.frame(pf.nut.mtx)
+pf.nut.mtx <- rownames_to_column(pf.nut.mtx, var = "ViromeID")
+pf.metadata <- select(pf.map, -Richness, -Moisture, -DNA)
+  
+pf.env <- inner_join(pf.metadata, pf.nut.mtx, by="ViromeID")
+pf.fit <- envfit(pf.nmds, pf.env, permutations = 999)
+
+nmds_scores <- scores(pf.nmds, display = "sites")
+nmds_scores <- as_tibble(nmds_scores, rownames = "ViromeID")
+nmds_scores <- inner_join(nmds_scores, pf.env, by = "ViromeID")
+
+nmds_plot <- ggplot(nmds_scores, aes(x = NMDS1, y = NMDS2, color = Treatment, shape = Habitat)) +
+  geom_point(size=3) +
+  #ggtitle("NMDS Plot of Habitat in Post-Fire Plots, Stress = 0.12") +
+  xlab("NMDS1") +
+  ylab("NMDS2") +
+  scale_color_manual(values = pf_treatment_color, limits = pf_treatment_order)+
+  theme_minimal()+
+  theme(axis.title.x = element_text(size = 15), 
+    axis.title.y = element_text(size = 15), 
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12)
+  )
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/NMDS/pf.nmds.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+
+
+vectors_df <- as.data.frame(pf.fit$vectors$arrows)
+pvals <- pf.fit$vectors$pvals
+vectors_df$pvals <- pf.fit$vectors$pvals
+vectors_df$label <- rownames(vectors_df)
+sig_vectors_df <- vectors_df %>% filter(pvals < 0.05)
+
+scale_factor <- 0.5
+sig_vectors_df <- sig_vectors_df %>%
+  mutate(scaled_NMDS1 = NMDS1 * scale_factor,
+         scaled_NMDS2 = NMDS2 * scale_factor)
+
+x <- ggplot()+
+  theme(panel.grid.major = element_blank(),   # Remove major grid lines
+        panel.grid.minor = element_blank()) 
+x +
+  geom_segment(data = sig_vectors_df,
+               aes(x = 0, y = 0, xend = scaled_NMDS1, yend = scaled_NMDS2),
+               arrow = arrow(length = unit(0.1, "cm")),
+               color = "black", alpha = 0.2, inherit.aes = FALSE) +
+  geom_text(data = sig_vectors_df, 
+            aes(x=NMDS1, y = NMDS2, label = label), 
+            color = "black",
+            size = 3, inherit.aes = FALSE)
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/NMDS/pf.nmds.vectors.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+# NMDS of Burned Samples (b)
+```{r}
+b.otu.dist <- distance(b.otu.rel)
+
+set.seed(1)
+b.nmds <- metaMDS(b.otu.dist)
+b.nmds$points
+plot(b.nmds)
+
+scores(b.nmds) %>%
+  as_tibble(rownames="ViromeID") %>%
+  inner_join(., b.map, by="ViromeID") %>%
+  ggplot(aes(x=NMDS1, y=NMDS2, shape=Habitat))+
+  geom_point()+
+  geom_text(aes(label= ViromeID))+
+  ggtitle("NMDS Plot of Habitat in Burned Plots, Stress = 0.14")+
+  theme_minimal()
+
+b.nut.mtx <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/w.nut.mtx.RDS")
+
+b.nut.mtx <- as.data.frame(b.nut.mtx)
+b.nut.mtx <- rownames_to_column(b.nut.mtx, var = "ViromeID")
+b.metadata <- select(b.map, -Richness, -Moisture, -DNA)
+  
+b.env <- inner_join(b.metadata, b.nut.mtx, by="ViromeID")
+b.fit <- envfit(b.nmds, b.env, permutations = 999)
+
+nmds_scores <- scores(b.nmds, display = "sites")
+nmds_scores <- as_tibble(nmds_scores, rownames = "ViromeID")
+nmds_scores <- inner_join(nmds_scores, b.env, by = "ViromeID")
+
+nmds_plot <- ggplot(nmds_scores, aes(x = NMDS1, y = NMDS2, color = Habitat, shape = Treatment)) +
+  geom_point(size=3) +
+  ggtitle("NMDS Plot of Habitat in Burned Plots, Stress = 0.14") +
+  xlab("NMDS1") +
+  ylab("NMDS2") +
+  scale_color_manual(values = Habitat_Color)+
+  theme_minimal() +
+  theme(axis.title.x = element_text(size = 15), 
+    axis.title.y = element_text(size = 15), 
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12)
+  )
+
+vectors_df <- as.data.frame(b.fit$vectors$arrows)
+pvals <- b.fit$vectors$pvals
+vectors_df$pvals <- b.fit$vectors$pvals
+vectors_df$label <- rownames(vectors_df)
+sig_vectors_df <- vectors_df %>% filter(pvals < 0.05)
+
+nmds_plot +
+  geom_segment(data = sig_vectors_df,
+               aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.2, "cm")),
+               color = "black", alpha = 0.2, inherit.aes = FALSE) +
+  geom_text(data = sig_vectors_df, 
+            aes(x=NMDS1, y = NMDS2, label = label), 
+            color = "black",
+            size = 4, inherit.aes = FALSE)
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/NMDS/b.nmds.pdf", width = 200, height = 150, units = "mm", dpi = 500)
 ```
 
 # Upset Plot of All Samples
@@ -189,12 +396,12 @@ upset(data = upsetdata, intersect = c("Woodland_BeforeBurn","Woodland_AfterContr
   name="vOTU Presence in Viromes by Habitat and Disturbance",
       base_annotations = list('Intersection size'=intersection_size(
         text=list(hjust=-0.05, vjust=0.5, angle = 90))),
-      min_size = 4,
+      min_size = 10,
       width_ratio = 0.125,
       themes=upset_default_themes(text=element_text(size = 20)),
       sort_sets=FALSE,
       set_sizes=(upset_set_size()+theme(axis.text.x = element_text(angle=90))),
-      stripes=upset_stripes(colors=c('mediumseagreen','mediumseagreen','mediumseagreen','yellowgreen','yellowgreen','yellowgreen')))
+      stripes=upset_stripes(colors=c('#39A96B','#39A96B','#39A96B','goldenrod1','goldenrod1','goldenrod1')))
 ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Upset/Habitat_Disturbance_upset.pdf", width = 300, height = 200, units = "mm", dpi = 500)
 ```
 
@@ -289,20 +496,57 @@ levels(original_contigs$Habitat)
 habitat_count <- original_contigs %>%
   count(Habitat)
 
-custom_colors <- c("agricultural_soil" = "tan3", "bluff" = "slategray3", "chaparral" = "yellowgreen", "grassland" = "limegreen", "lake" = "dodgerblue3", "mixedconifer_forest" = "darkgreen", "peat" = "gray21", "tropical_rainforest" = "springgreen2", "varies" = "tomato", "wetland" = "darkslateblue", "woodland" = "mediumseagreen")
+habitat_count <- habitat_count %>%
+  filter(!(Habitat %in% c("chaparral", "woodland")))
+
+
+custom_colors <- c("agricultural_soil" = "tan3", "bluff" = "slategray3", "chaparral" = "yellowgreen", "grassland" = "limegreen", "lake" = "dodgerblue3", "mixedconifer_forest" = "forestgreen", "peat" = "gray21", "tropical_rainforest" = "springgreen2", "varies" = "tomato", "wetland" = "darkslateblue", "woodland" = "mediumseagreen")
 
 
 ggplot(habitat_count, aes(x = "", y = n, fill = Habitat)) +
-  geom_col(color = "black", linewidth = 0.05) +
-  geom_text(aes(label = paste(Habitat, "-", n)), 
-            position = position_stack(vjust = 0.5)) +
+  geom_col(color = "black", linewidth = 0.5) +
+  #geom_text(aes(label = paste(Habitat, "-", n)), 
+            #position = position_stack(vjust = 0.5)) +
   coord_polar("y", start = 0) +
-  labs(title = "Habitat of Contigs Originally Found in Other Datasets") +
+  #labs(title = "Habitat of Contigs Originally Found in Other Datasets") +
   theme_void() +
-  theme(legend.position = "right") +
+  theme(legend.position = "none") +
   scale_fill_manual(values = custom_colors)
   
 ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Habitat_pie.pdf", width = 200, height = 200, units = "mm", dpi = 500)
+```
+# identifying how many vOTUs clustered with vOTUs from original dataset
+```{r}
+# these are all the contigs that were found in other datasets
+Pb_contigs <- bind_rows(Pigeon_contigs,NatRsv_contigs,Blodgett_contigs)
+
+# I need to remove the chaparral and woodland contigs, because that is redundant
+Pb_contigs <- Pb_contigs %>%
+  filter(!(Habitat %in% c("chaparral", "woodland")))
+
+# total number of NEW contigs - 1,644
+length(unique(Pb_contigs$vOTU))
+
+# these are all the contigs that were found the LNU dataset after clustering with these NEW contigs
+LNU_Pb_contigs <- rownames(lnu_Pb_otu)
+LNU_Pb_contigs <- data.frame(vOTU = LNU_Pb_contigs)
+
+# these are the contigs that are found as they are originally named in the Blodgett/PIGEON database: 904 contigs
+merge_contigs <- merge(LNU_Pb_contigs, Pb_contigs, by = "vOTU")
+
+# these are the contigs that were found in Blodgett/PIGEON database but maybe got renamed because it clustered under another contig from the LNU study which was a better representative: 740 contigs
+renamed_contigs <- anti_join(Pb_contigs, merge_contigs, by = "vOTU")
+vOTU <- renamed_contigs$vOTU
+writeLines(as.character(vOTU), "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/renamed_contigs.txt")
+
+cdhit_clusters <- read.csv("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/clustered_Pbl.fna.csv", header = TRUE, sep = ",")
+
+
+### THIS DIDN'T WORK....???? I DON'T EVEN KNOW WHAT I'm TRYING TO DO HERE...
+# this is a dataframe showing what those Blodgett/PIGEON contigs got renamed to OR what the original dataset contigs might have gotten renamed to under this analysis
+cluster_contig_names <- merge(renamed_contigs, cdhit_clusters, by.x = "vOTU", by.y = "vOTU", all.x = TRUE)
+unique(cluster_contig_names$OTU) #121 original contigs
+unique(cluster_contig_names$Renamed_OTU) # shrank to 105 contigs
 ```
 
 
@@ -378,11 +622,8 @@ otu.rel.phylum <- merge(iphop.phylum, otu.rel.otu, by = "vOTU", all.y = TRUE)
 otu.rel.phylum <- otu.rel.phylum %>% mutate(HostPhylum = ifelse(is.na(HostPhylum), "Unknown", HostPhylum))
 # remove OTU column
 otu.rel.phylum <- otu.rel.phylum %>% select(-vOTU) 
-
-test <- otu.rel.phylum %>% select(-HostPhylum)
-colSums(test)
-
 otu.phylum.long <- pivot_longer(otu.rel.phylum, cols=2:47, names_to = "ViromeID", values_to = "RelAbd")
+saveRDS(otu.phylum.long, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/otu.phylum.long.rds")
 otu.phylum.stack <- group_by(otu.phylum.long, HostPhylum, ViromeID) %>%
   summarize(RelAbd=sum(RelAbd))
 otu.phylum.stack <- otu.phylum.stack %>%

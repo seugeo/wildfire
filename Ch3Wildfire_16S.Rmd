@@ -1,0 +1,101 @@
+---
+title: "Ch3Wildfire_16S"
+output: html_document
+date: "2024-06-27"
+---
+```{r}
+# LOAD PACKAGES
+library(tidyverse)
+library(vegan)
+library(dplyr)
+library(ggplot2)
+library(DESeq2)
+library(factoextra)
+library(gridExtra)
+library(cowplot)
+library(ComplexUpset)
+
+# Load RDS files
+lnu.asv <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu.asv.RDS")
+tax_filtered <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/tax_filtered.RDS")
+wildfire_asv_map <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_asv_map.RDS")
+```
+
+# PCoA: ALL DATA ... do this before taxonomy 
+```{r}
+# create rarefaction curve to determine rarefaction threshold for abundance table
+# don't need to run the below code every time, only the first time to figure out what to rarefy to
+#asv.rarecurve <- rarecurve(t(lnu.asv), step = 100) 
+#x <- map_dfr(asv.rarecurve, bind_rows) %>% bind_cols(colnames(lnu.asv),.)
+#x <- as.data.frame(x)
+#row.names(x) <- x[, 1]
+
+#based on x dataframe, choose sample size to rarefy to
+asv.rare <- t(rrarefy(t(lnu.asv), sample = 17700))
+
+# remove singletons --> 4,928 contigs
+asv.rare <- data.frame(asv.rare) %>%
+  rmv_sngl()
+
+#bray-curtis dissimilarity distance matrix 
+asv.dist=vegdist(t(asv.rare), method = "bray")
+asv.pcoa <- pcoa(asv.dist)
+asv.pcoa.points <- pcoa.points(asv.pcoa)
+asv.map <- pcoa.map.asv(asv.pcoa.points, wildfire_asv_map)
+variance(asv.pcoa, 1)
+variance(asv.pcoa, 2)
+
+pcoa.treatment.habitat(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "20.90% Variance Explained", y_label = "11.51% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_treatment_habitat.pdf")
+
+pcoa.treatment.time(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = TimePoint, x_label = "20.90% Variance Explained", y_label = "11.51% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_treatment_time.pdf")
+
+pcoa.habitat.location(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Habitat, shape_col = Location, x_label = "20.90% Variance Explained", y_label = "11.51% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_habitat_location.pdf")
+
+```
+
+# Taxonomy Stacked Bar Plot: ALL DATA (2021 + 2022)
+```{r}
+# add OTU_ID back onto asv.rare
+asv.rare$OTU_ID <- rownames(asv.rare)
+
+# Join taxonomy and abundance data together
+tax_lnu <- left_join(asv.rare, tax_filtered, by = "OTU_ID")
+# make sure asv.rare is in the same order as tax_lnu (return = TRUE)
+check_column <- "OTU_ID"
+all(asv.rare[[check_column]] == tax_lnu[[check_column]])
+unique(tax_lnu$Phylum)
+
+# pivot table and group by Phylum
+tax_lnu.long <- pivot_longer(tax_lnu, cols=1:87, names_to = "ASV_ID", values_to = "counts")
+lnu.phylum.long <- group_by(tax_lnu.long, Phylum, ASV_ID) %>%
+  summarize(counts=sum(counts))
+
+# collapse phyla into "other" category if represents less than 2%, which is 354 (rarefied to 17,700)
+lnu.phylum.long$Phylum <- as.character(lnu.phylum.long$Phylum)
+lnu.phylum.long <- lnu.phylum.long %>%
+  group_by(Phylum) %>%
+  mutate(NewPhylum = ifelse(all(counts < 354), 'Other', Phylum)) %>%
+  ungroup()
+# find out which phyla are represented (used for making legend)
+unique(lnu.phylum.long$NewPhylum)
+
+saveRDS(lnu.phylum.long, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_phylum_long.RDS")
+
+# Prep data frame for plotting
+lnu.phylum.map <- merge(lnu.phylum.long, wildfire_asv_map, by="ASV_ID")
+
+# Plot
+lnu_phylum <- ggplot(lnu.phylum.map, aes(x=Treatment, y=counts, fill=NewPhylum))+
+    labs(x="Treatment", 
+       y ="Counts",
+       title = "LNU 16S rRNA ASV Profile")+
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  theme_bw() +
+  #theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~ Habitat)
+
+lnu_phylum
+
+lnu_phylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/lnu_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```

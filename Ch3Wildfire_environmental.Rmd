@@ -23,8 +23,7 @@ library(lubridate)
 
 # PHYSICOCHEMICAL DATA
 ```{r}
-# Upload Physicochemical Data
-chem_wildfire=read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/lnu_env_data.csv", delim = ",", col_names = TRUE)
+chem_wildfire <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/chem_wildfire.RDS")
 
 #Generate a data frame with the full names of all the variables profiled
 variables <- tribble(~Variable, ~Variable2,
@@ -67,41 +66,32 @@ variables <- tribble(~Variable, ~Variable2,
 # Z-transformed Nutrient Matrix
 ```{r}
 # Prep dataframe
-w.chem <- chem_wildfire
-w.chem <- w.chem %>%
-  mutate(Timepoint = case_when(
-    Date == "1/13/2021" ~ "T1",
-    Date == "3/11/2021" ~ "T2",
-    Date == "3/12/2021" ~ "T2",
-    Date == "5/16/2021" ~ "T3",
-    Date == "5/17/2021" ~ "T3",
-    Date == "8/10/2021" ~ "T4", 
-    Date == "8/9/2021" ~ "T4"))
-w.chem.ID=w.chem %>%
-  select(-OrganicNRelease, -OrganicPRelease, -SoilHealthCalculation, -OrganicNInorganicN, -WDRFBuffer, -OrganicNReserve, -OrganicPReserve, -SampleID, -Date, -TotalDNAID, -Timepoint, -Location, -Habitat, -Plot, -SubPlot, -Treatment)
+w.chem.ID=chem_wildfire%>%
+  select(-OrganicNRelease, -OrganicPRelease, -SoilHealthCalculation, -OrganicNInorganicN, -WDRFBuffer, -OrganicNReserve, -OrganicPReserve, -SampleID, -Date, -TotalDNAID, -Timepoint, -Location, -Habitat, -Plot, -SubPlot, -Treatment, -ASV_ID)
 
 # Remove variables with no variation, z-transform each variable, and format it as a matrix
 w.nut.mtx <- nutmtx(w.chem.ID)
-w.chem.map <- w.chem[, -c(3:38)]
-b.map = left_join(b.map,b.nut.mtx,by="ViromeID")
-b.nut.mtx <- b.nut.mtx[,-1]
-b.nut.mtx <- as.matrix(b.nut.mtx)
+w.chem.map <- chem_wildfire[, -c(10:45)]
+w.chem.map = left_join(w.chem.map,w.nut.mtx,by="ViromeID")
+w.nut.mtx <- w.nut.mtx[,-1]
+w.nut.mtx <- as.matrix(w.nut.mtx)
+
+saveRDS(w.nut.mtx, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/w.nut.mtx.RDS")
 ```
 
-# Correlation b/t host phylum prediction and chemical properties
+### THIS ISN'T WORKING
+# I dont know how to deal with this...
+# Correlation b/t host phylum prediction and chemical properties 
 ```{r}
-p.phylum.long <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch2Blodgett/R_Figures/rds/p.phylum.long.RDS")
-microbiome_data <- p.phylum.long %>%
-  pivot_wider(names_from = Phylum, values_from = counts, values_fill = list(counts = 0))
+otu.phylum.long <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/otu.phylum.long.RDS")
+microbiome_data <- otu.phylum.long %>%
+  pivot_wider(names_from = HostPhylum, values_from = RelAbd, values_fill = list(RelAbd = 0))
 microbiome_data <- as.data.frame(microbiome_data)
 
   
-chemical_data <- b.chem.ID
-chemical_data <- chemical_data %>%
-  mutate(SampleID = gsub("V", "M", SampleID)) %>%
-  mutate(SampleID = ifelse(SampleID == "UDM24D", "UDM24", SampleID))
+chemical_data <- w.chem.ID
 colnames(chemical_data)[colnames(chemical_data) == "SampleID"] <- "MapID"
-chemical_data = left_join(p_map, chemical_data, by="MapID")
+chemical_data = left_join(w.chem.map, chemical_data, by="MapID")
 chemical_data <- chemical_data[, -c(2:14)]
 
 # Check that the dataframes have the same row names
@@ -139,7 +129,279 @@ p$tree_col$labels <- paste0(p$tree_col$labels, ifelse(cor(col(cor_values_subset)
 
 ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch2Blodgett/R_Figures/pdf/HeatMap_Dendrogram/correlation_heatmap.pdf",
        plot = p$gtable, width = 10, height = 8)
-
-
-display.brewer.all()
 ```
+
+# Correlation b/t microbiome and chemical properties
+```{r}
+lnu.phylum.long <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_phylum_long.RDS")
+lnu.phylum.long=lnu.phylum.long%>%
+  select(-NewPhylum)
+microbiome_data <- lnu.phylum.long %>%
+  pivot_wider(names_from = Phylum, values_from = counts, values_fill = list(counts = 0))
+microbiome_data <- as.data.frame(microbiome_data)
+values_to_remove <- c("FIRE062", "FIRE063", "FIRE064", "FIRE065", "FIRE066", "FIRE067", "FIRE068", "FIRE069")
+microbiome_data <- microbiome_data %>% filter(!ASV_ID %in% values_to_remove)
+
+chemical_data=chem_wildfire%>%
+  select(-OrganicNRelease, -OrganicPRelease, -SoilHealthCalculation, -OrganicNInorganicN, -WDRFBuffer, -OrganicNReserve, -OrganicPReserve, -SampleID, -Date, -TotalDNAID, -Timepoint, -Location, -Habitat, -Plot, -SubPlot, -Treatment, -ViromeID)
+
+wildfire_asv_map <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_asv_map.RDS")
+wildfire_asv_map=wildfire_asv_map %>%
+  select(-Moisture, -DNA)
+wildfire_asv_map <- wildfire_asv_map[!(wildfire_asv_map$TimePoint=="T1"),]
+chemical_data = left_join(wildfire_asv_map, chemical_data, by="ASV_ID")
+chemical_data <- chemical_data[, -c(1:11)]
+
+# Check that the dataframes have the same row names
+identical(chemical_data$ASV_ID, microbiome_data$ASV_ID)
+
+# Remove ID columns
+microbiome_data <- microbiome_data %>% select(-ASV_ID)
+chemical_data <- chemical_data %>% select(-ASV_ID)
+
+# Compute the correlation matrix
+cor_matrix <- rcorr(as.matrix(microbiome_data), as.matrix(chemical_data))
+cor_values <- cor_matrix$r
+cor_pvalues <- cor_matrix$P
+
+microbiome_indices <- c(1:32)
+chemical_indices <- c(33:61)
+cor_values_subset <- cor_values[microbiome_indices, chemical_indices]
+cor_pvalues_subset <- cor_pvalues[microbiome_indices, chemical_indices]
+sig_matrix <- ifelse(cor_pvalues_subset < 0.05, "*", "")
+
+# Create a combined data frame with correlations and p-values
+cor_values[is.na(cor_values_subset)] <- 0  # Replace NA correlations with 0 for visualization
+
+p <- pheatmap(cor_values_subset,
+   clustering_distance_rows = "euclidean",
+   clustering_distance_cols = "euclidean",
+   clustering_method = "complete",
+   main = "Correlation Heatmap of Microbiome and Chemical Properties",
+   color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
+  display_numbers = FALSE)
+
+# Modify row and column labels to include "*" for significant correlations
+p$tree_row$labels <- paste0(p$tree_row$labels, ifelse(cor(row(cor_values_subset)) < 0.05, "*", ""))
+p$tree_col$labels <- paste0(p$tree_col$labels, ifelse(cor(col(cor_values_subset)) < 0.05, "*", ""))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/HeatMap_Dendrogram/16S_correlation_heatmap.pdf", plot = p$gtable, width = 10, height = 8)
+
+```
+
+```{r}
+#Calculate the environmental distance and filter redundant values
+w.nut.dist <- as.matrix(dist(w.nut.mtx, method = "euclidean"))
+w.nut.pca=cmdscale(w.nut.dist, eig = TRUE)
+pcavariance(w.nut.pca, 1)
+pcavariance(w.nut.pca, 2)
+w.nut.pca$points
+w.nut.pca.points=data.frame(w.nut.pca$points)
+colnames(w.nut.pca.points)=c("pca1", "pca2")
+wildfire_map_095 <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/wildfire_map_095.RDS")
+w.map.pca <- pca.map(w.nut.pca.points,wildfire_map_095)
+
+# PCA plot
+w <- ggplot(w.map.pca, aes(x=pca1, y=pca2, color=Treatment, shape = Habitat, frame = TimePoint))+
+  geom_point(size = 5)+
+  xlab("PCA1, 39.07% Variance Explained")+
+  ylab("PCA2, 15.11% Variance Explained")+
+  ggtitle("PCA of Environmental Data - LNU Dataset") +
+  scale_color_manual(values=Treatment_20_Color, limits=Treatment_20_Order) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 18)) +
+  theme(legend.text = element_text(size = 20)) +
+  theme(legend.title = element_text(size = 20)) +
+  theme(axis.text = element_text(size = 15))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCA/LNU_PCA.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+
+w_habitat <- ggplot(w.map.pca, aes(x=pca1, y=pca2, color=Habitat, shape = Location, frame = TimePoint))+
+  geom_point(size = 5)+
+  xlab("PCA1, 39.07% Variance Explained")+
+  ylab("PCA2, 15.11% Variance Explained")+
+  ggtitle("PCA of Environmental Data - LNU Dataset") +
+  scale_color_manual(values=Habitat_Color, limits=Habitat_Order) +
+  theme_bw() +
+  theme(axis.title = element_text(size = 18)) +
+  theme(legend.text = element_text(size = 20)) +
+  theme(legend.title = element_text(size = 20)) +
+  theme(axis.text = element_text(size = 15))
+```
+
+# DISTANCE DATA
+```{r}
+wildfire_map_095 <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/wildfire_map_095.RDS")
+
+wildfire_gps <- wildfire_map_095 %>%
+  mutate(longitude = case_when(
+    Plot == "MC1" ~ "-122.340161", 
+    Plot == "MC2" ~ "-122.342634",
+    Plot == "MC3" ~ "-122.443250", 
+    Plot == "MC4" ~ "-122.4446",
+    Plot == "MW1" ~ "-122.340566", 
+    Plot == "MW2" ~ "-122.343707",
+    Plot == "MW3" ~ "-122.4304", 
+    Plot == "MW4" ~ "-122.4271",
+    Plot == "QC1" ~ "-122.14871", 
+    Plot == "QC2" ~ "-122.151743",
+    Plot == "QW1" ~ "-122.149034", 
+    Plot == "QW2" ~ "-122.151481"))
+
+wildfire_gps <- wildfire_gps %>%
+  mutate(latitude = case_when(
+    Plot == "MC1" ~ "38.838557", 
+    Plot == "MC2" ~ "38.837889",
+    Plot == "MC3" ~ "38.878067", 
+    Plot == "MC4" ~ "38.8793",
+    Plot == "MW1" ~ "38.837190", 
+    Plot == "MW2" ~ "38.837483",
+    Plot == "MW3" ~ "38.873683", 
+    Plot == "MW4" ~ "38.874267",
+    Plot == "QC1" ~ "38.482902", 
+    Plot == "QC2" ~ "38.482457",
+    Plot == "QW1" ~ "38.483063", 
+    Plot == "QW2" ~ "38.48313"))
+
+quail_gps <- wildfire_gps[!(wildfire_gps$Location=="McLaughlin"),] 
+quail_locations <- quail_gps %>%
+  distinct(Plot, .keep_all = TRUE) %>%
+  arrange(Plot)
+quail_locations <- quail_locations %>%
+  select(Plot, longitude, latitude)
+
+mcl_gps <- wildfire_gps[!(wildfire_gps$Location=="Quail Ridge"),] 
+mcl_locations <- mcl_gps %>%
+  distinct(Plot, .keep_all = TRUE) %>%
+  arrange(Plot)
+mcl_locations <- mcl_locations %>%
+  select(Plot, longitude, latitude)
+
+wildfire_sample_locations <- wildfire_gps %>%
+  distinct(Plot, .keep_all = TRUE) %>%
+  arrange(Plot)
+wildfire_sample_locations <- wildfire_sample_locations %>%
+  select(Plot, longitude, latitude)
+
+
+
+wildfire_gps <- wildfire_gps[!(wildfire_gps$Virome=="no"),]
+
+wildfire_gps <- wildfire_gps %>%
+  select(ViromeID, longitude, latitude)
+
+wildfire_gps <- column_to_rownames(wildfire_gps, var = "ViromeID")
+wildfire_gps <- as.data.frame(wildfire_gps)
+wildfire_gps$longitude <- as.numeric(wildfire_gps$longitude)
+wildfire_gps$latitude <- as.numeric(wildfire_gps$latitude)
+dist_matrix_vinellips <- distm(wildfire_gps, fun = distVincentyEllipsoid)
+rownames(dist_matrix_vinellips) <- colnames(dist_matrix_vinellips) <- rownames(wildfire_gps)
+```
+
+# SAMPLE LOCATIONS
+```{r}
+library(ggplot2)
+library(sf)
+library(ggspatial)
+library(rosm)
+library(prettymapr)
+
+sample_sf <- st_as_sf(wildfire_sample_locations, coords = c("longitude", "latitude"), crs = 4326)
+ggplot() +
+  annotation_map_tile(type = "osm", zoom = 13) +
+  geom_sf(data = sample_sf, aes(geometry = geometry), color = "black", size = 2, alpha = 0.75) +
+  annotation_scale(location = "bl", width_hint = 0.5) +  # Adding a scale bar
+  annotation_north_arrow(location = "tl", which_north = "true", 
+                         pad_x = unit(1.7, "in"), pad_y = unit(0.05, "in"),
+                         style = north_arrow_fancy_orienteering) +  # Adding a north arrow
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  ) +
+  labs(title = "Sample Locations",
+       subtitle = "Study area with sample points")
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Maps/full_map.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+
+# Quail Ridge Subset
+quail_sf <- st_as_sf(quail_locations, coords = c("longitude", "latitude"), crs = 4326)
+
+
+ggplot() +
+  annotation_map_tile(type = "osm", zoom = 50) +
+  geom_sf(data = quail_sf, aes(geometry = geometry), color = "white", size = 3) +
+  annotation_scale(location = "br", width_hint = 0.5) +  # Adding a scale bar
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Maps/quail_map.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+
+# McLaughlin Subset
+mcl_sf <- st_as_sf(mcl_locations, coords = c("longitude", "latitude"), crs = 4326)
+ggplot() +
+  annotation_map_tile(type = "osm", zoom = 15) +
+  geom_sf(data = mcl_sf, aes(geometry = geometry), color = "white", size = 3) +
+  annotation_scale(location = "bl", width_hint = 0.5) +  # Adding a scale bar
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  )
+
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Maps/mclaughlin_map.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+```
+
+
+# DISTANCE DECAY (VIROMES)
+```{r}
+pf.otu.dist <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/pf.otu.dist.RDS")
+bray_dist_matrix <- as.matrix(pf.otu.dist)
+physical_dist_matrix <- dist_matrix_vinellips
+
+bray_dist_vector <- as.vector(as.dist(pf.otu.dist))
+physical_dist_vector <- as.vector(as.dist(dist_matrix_vinellips))
+bray_sim_vector <- 1 - bray_dist_vector
+
+cor_test_result <- cor.test(physical_dist_vector, bray_sim_vector)
+model <- lm(bray_sim_vector ~ physical_dist_vector)
+model_summary <- summary(model)
+
+slope <- model_summary$coefficients[2,1]
+p_value <- coef(summary(model))[2,4]
+correlation_coefficient <- cor_test_result$estimate
+
+plot_data <- data.frame(PhysicalDistance = physical_dist_vector, BrayCurtisSimilarity = bray_sim_vector)
+
+ggplot(plot_data, aes(x = physical_dist_vector, y = bray_sim_vector)) +
+  geom_point()+
+  geom_smooth(method = "lm", col = "black") +
+  labs(
+    title = "Distance Decay of Bray-Curtis Similarity",
+    x = "Physical Distance (meters)",
+    y = "Bray-Curtis Similarity",
+  ) +
+  theme_bw() +
+  annotate("text", x = Inf, y = Inf, label = paste0("p-value = ", format(p_value, scientific = TRUE)), hjust = 2, vjust = 2.5, size = 5) + 
+  annotate("text", x = Inf, y = Inf, label = sprintf("slope = %.3e", round(slope, 3)), hjust = 2.4, vjust = 3.7, size = 5) + 
+  annotate("text", x = Inf, y = Inf, label = paste0("r = ", round(correlation_coefficient, 3)), hjust = 4.2, vjust = 4.9, size = 5)
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/ScatterPlot/distance_decay_virome.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+```
+
