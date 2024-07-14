@@ -101,7 +101,6 @@ lnu_otu_filtered <- lnu_otu_filtered[, order(names(lnu_otu_filtered))]
 identical(colnames(otu_filtered), wildfire_map$ViromeID)
 identical(colnames(lnu_otu_filtered), wildfire_map$ViromeID)
 
-
 saveRDS(otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_Pb_otu.RDS")
 saveRDS(lnu_otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_otu.RDS")
 saveRDS(wildfire_map, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
@@ -115,7 +114,6 @@ wildfire_DNA <- read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildf
 wildfire_DNA <- wildfire_DNA[!(wildfire_DNA$TimePoint=="T0"),]
 
 saveRDS(wildfire_DNA, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_DNA.RDS")
-
 ```
 
 
@@ -123,10 +121,15 @@ saveRDS(wildfire_DNA, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R
 ```{r}
 # LOAD & CLEAN TAXONOMY DATA
 tax_all <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/tax_all.RDS")
+unique(tax_all$Phylum)
 # Change NAs in taxonomy to "unknown"
 tax_all$Family[is.na(tax_all$Family)] <- "Unknown Family"
 tax_all$Order <- factor(tax_all$Order, levels = c(levels(tax_all$Order), "Unknown Order"))
 tax_all$Order[is.na(tax_all$Order)] <- "Unknown Order"
+tax_all$Class <- factor(tax_all$Class, levels = c(levels(tax_all$Class), "Unknown Class"))
+tax_all$Class[is.na(tax_all$Class)] <- "Unknown Class"
+tax_all$Phylum <- factor(tax_all$Phylum, levels = c(levels(tax_all$Phylum), "Unknown Phylum"))
+tax_all$Phylum[is.na(tax_all$Phylum)] <- "Unknown Phylum"
 # remove mitochondria and chloroplast
 criteria <- !(tax_all$Family == "Mitochondria" | tax_all$Order == "Chloroplast")
 tax_filtered <- tax_all[criteria, ]
@@ -134,6 +137,7 @@ tax_filtered <- tax_all[criteria, ]
 tax_filtered <- tax_filtered %>%
   mutate(Phylum = as.character(Phylum)) %>%
   mutate(Phylum = ifelse(Phylum == "Chloroflexi", "Chloroflexota", Phylum))
+unique(tax_filtered$Phylum)
 
 saveRDS(tax_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/tax_filtered.RDS")
 

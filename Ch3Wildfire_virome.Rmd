@@ -24,6 +24,8 @@ lnu_in_Blodgett_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3W
 lnu_in_PIGEON_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_PIGEON_otu.RDS")
 # metadata
 wildfire_data <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
+
+identical(colnames(lnu_otu), wildfire_data$ViromeID)
 ```
 
 # DNA Yields
@@ -63,6 +65,15 @@ kruskal.test(DNA ~ TimePoint, DNA_NA_0_w_ctrl)
 DNA_NA_0_w_burn <- DNA_NA_0.stats %>%
   filter(Habitat == "Woodland"&Treatment == "AfterBurn_Wildfire")
 kruskal.test(DNA ~ TimePoint, DNA_NA_0_w_burn)
+DNA_NA_0_T3 <- DNA_NA_0.stats %>%
+  filter(TimePoint == "T3")
+kruskal.test(DNA ~ Treatment, DNA_NA_0_T3)
+DNA_NA_0_T4 <- DNA_NA_0.stats %>%
+  filter(TimePoint == "T4")
+kruskal.test(DNA ~ Treatment, DNA_NA_0_T4)
+DNA_NA_0_T5 <- DNA_NA_0.stats %>%
+  filter(TimePoint == "T5")
+kruskal.test(DNA ~ Treatment, DNA_NA_0_T5)
 
 # replacing NA with "0.1" - the top of threshold
 DNA_NA_0.1 <- wildfire_DNA
@@ -138,7 +149,9 @@ variance(otu.pcoa, 1)
 variance(otu.pcoa, 2)
 
 # Treatment + Habitat
-pcoa.treatment.habitat(otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "9.91% Variance Explained", y_label = "6.55% Variance Explained", title = "LNU Viromes (clustered alone)", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/lnu_otu_treatment_habitat.pdf")
+pcoa.treatment.habitat(otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "9.91% Variance Explained", y_label = "6.55% Variance Explained", title = "LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/lnu_otu_treatment_habitat.pdf")
+
+pcoa.habitat.location(otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Habitat, shape_col = Location, x_label = "9.91% Variance Explained", y_label = "6.55% Variance Explained", title = "LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/lnu_Pb_otu_habitat_location.pdf")
 
 # run PERMANOVAs
 variables <- c("Habitat", "Treatment", "Location")
@@ -165,6 +178,8 @@ colSums(b.otu.rel)
 b.map <- subset(wildfire_data, Treatment=="AfterBurn_Wildfire")
 richness <- colSums(b.otu.rel > 0)
 b.map$Richness <- richness
+
+identical(colnames(b.otu.rel), b.map$ViromeID)
 ```
 # Chaparral only (ch - chaparral) and only with LNU clustered dataset (not clustered with PIGEON or blodgett)
 ```{r}
@@ -393,8 +408,8 @@ upsetdata <- data.frame(Chaparral_BeforeBurn=Chaparral_BeforeBurn_pa, Woodland_B
 # plot
 
 upset(data = upsetdata, intersect = c("Woodland_BeforeBurn","Woodland_AfterControl","Woodland_AfterBurn", "Chaparral_BeforeBurn","Chaparral_AfterControl","Chaparral_AfterBurn"), 
-  name="vOTU Presence in Viromes by Habitat and Disturbance",
-      base_annotations = list('Intersection size'=intersection_size(
+  name="vOTU Detection in Viromes by Habitat and Disturbance",
+      base_annotations = list('Intersection size (number of vOTUs)'=intersection_size(
         text=list(hjust=-0.05, vjust=0.5, angle = 90))),
       min_size = 10,
       width_ratio = 0.125,
@@ -606,6 +621,9 @@ iphop.uniq <- iphop.uniq %>%
 iphop.uniq <- iphop.uniq %>%
   distinct()
 
+# save dataframe for all information of vOTU host prediction
+iphop.LNU <- iphop.uniq
+
 #create dataframe with just OTU and phylum from iphop
 iphop.phylum <- iphop.uniq[, c("vOTU", "HostPhylum")]
 saveRDS(iphop.phylum, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/iphop_phylum.RDS")
@@ -685,10 +703,41 @@ hostphylum <- ggplot(ch.otu.phylum.map, aes(x=Time_ID, y=RelAbd, fill=NewHostPhy
   annotate('rect', xmin = 11.5, xmax = 15.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
   geom_bar(stat="identity")+
   scale_fill_manual(values=collapsed_phylum_colors) +
-  geom_vline(xintercept = c(4.5, 7.5, 19.5), linetype = "solid", color = "black", size = 0.5)+
+  geom_vline(xintercept = c(4.5, 7.5, 19.5), linetype = "solid", color = "black", linewidth = 0.5)+
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
 hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/chaparral_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+# Host Prediction Stats - chaparral
+```{r}
+ch.host.stats <- ch.otu.phylum.map
+
+acido_ch <- ch.host.stats %>%
+  filter(HostPhylum == "Acidobacteriota" & TimePoint != "T0")
+actino_ch <- ch.host.stats %>%
+  filter(HostPhylum == "Actinobacteriota" & TimePoint != "T0")
+bact_ch <- ch.host.stats %>%
+  filter(HostPhylum == "Bacteroidota" & TimePoint != "T0")
+firm_ch <- ch.host.stats %>%
+  filter(HostPhylum == "Firmicutes" & TimePoint != "T0")
+gemma_ch <- ch.host.stats %>%
+  filter(HostPhylum == "Gemmatimonadota" & TimePoint != "T0")
+myxo_ch <- ch.host.stats %>%
+  filter(HostPhylum == "Myxococcota" & TimePoint != "T0")
+nitro_ch <- ch.host.stats %>%
+  filter(HostPhylum == "Nitrospirota" & TimePoint != "T0")
+proteo_ch <- ch.host.stats %>%
+  filter(HostPhylum == "Proteobacteria" & TimePoint != "T0")
+
+kruskal.test(RelAbd ~ Treatment, acido_ch)
+kruskal.test(RelAbd ~ Treatment, actino_ch)
+kruskal.test(RelAbd ~ Treatment, bact_ch)
+kruskal.test(RelAbd ~ Treatment, firm_ch)
+kruskal.test(RelAbd ~ Treatment, gemma_ch)
+kruskal.test(RelAbd ~ Treatment, myxo_ch)
+kruskal.test(RelAbd ~ Treatment, nitro_ch)
+kruskal.test(RelAbd ~ Treatment, proteo_ch)
+
 ```
 
 # host prediction - Only Woodland (only the LNU clustered with itself, not with PIGEON or blodgett contigs)
@@ -730,3 +779,35 @@ hostphylum <- ggplot(wo.otu.phylum.map, aes(x=Time_ID, y=RelAbd, fill=NewHostPhy
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
 hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/woodland_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
 ```
+
+```{r}
+wo.host.stats <- wo.otu.phylum.map
+
+
+actino_wo <- wo.host.stats %>%
+  filter(HostPhylum == "Actinobacteriota" & TimePoint != "T0")
+bact_wo <- wo.host.stats %>%
+  filter(HostPhylum == "Bacteroidota" & TimePoint != "T0")
+cyan_wo <- wo.host.stats %>%
+  filter(HostPhylum == "Cyanobacteria" & TimePoint != "T0")
+firm_wo <- wo.host.stats %>%
+  filter(HostPhylum == "Firmicutes" & TimePoint != "T0")
+gemma_wo <- wo.host.stats %>%
+  filter(HostPhylum == "Gemmatimonadota" & TimePoint != "T0")
+myxo_wo <- wo.host.stats %>%
+  filter(HostPhylum == "Myxococcota" & TimePoint != "T0")
+nitro_wo <- wo.host.stats %>%
+  filter(HostPhylum == "Nitrospirota" & TimePoint != "T0")
+proteo_wo <- wo.host.stats %>%
+  filter(HostPhylum == "Proteobacteria" & TimePoint != "T0")
+
+kruskal.test(RelAbd ~ Treatment, actino_wo)
+kruskal.test(RelAbd ~ Treatment, bact_wo)
+kruskal.test(RelAbd ~ Treatment, cyan_wo)
+kruskal.test(RelAbd ~ Treatment, firm_wo)
+kruskal.test(RelAbd ~ Treatment, gemma_wo)
+kruskal.test(RelAbd ~ Treatment, myxo_wo)
+kruskal.test(RelAbd ~ Treatment, nitro_wo)
+kruskal.test(RelAbd ~ Treatment, proteo_wo)
+```
+

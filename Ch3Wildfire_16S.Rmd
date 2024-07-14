@@ -9,7 +9,6 @@ library(tidyverse)
 library(vegan)
 library(dplyr)
 library(ggplot2)
-library(DESeq2)
 library(factoextra)
 library(gridExtra)
 library(cowplot)
@@ -31,9 +30,10 @@ wildfire_asv_map <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wild
 #row.names(x) <- x[, 1]
 
 #based on x dataframe, choose sample size to rarefy to
+set.seed(24)
 asv.rare <- t(rrarefy(t(lnu.asv), sample = 17700))
 
-# remove singletons --> 4,928 contigs
+# remove singletons --> 4,933 contigs
 asv.rare <- data.frame(asv.rare) %>%
   rmv_sngl()
 
@@ -45,11 +45,16 @@ asv.map <- pcoa.map.asv(asv.pcoa.points, wildfire_asv_map)
 variance(asv.pcoa, 1)
 variance(asv.pcoa, 2)
 
-pcoa.treatment.habitat(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "20.90% Variance Explained", y_label = "11.51% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_treatment_habitat.pdf")
+pcoa.treatment.habitat(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "20.89% Variance Explained", y_label = "11.47% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_treatment_habitat.pdf")
 
-pcoa.treatment.time(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = TimePoint, x_label = "20.90% Variance Explained", y_label = "11.51% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_treatment_time.pdf")
+pcoa.treatment.time(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = TimePoint, x_label = "20.89% Variance Explained", y_label = "11.47% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_treatment_time.pdf")
 
-pcoa.habitat.location(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Habitat, shape_col = Location, x_label = "20.90% Variance Explained", y_label = "11.51% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_habitat_location.pdf")
+pcoa.habitat.location(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Habitat, shape_col = Location, x_label = "20.89% Variance Explained", y_label = "11.47% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_habitat_location.pdf")
+
+# run PERMANOVAs
+variables <- c("Habitat", "Treatment", "Location")
+adonis.results <- run_adonis(variables, asv.dist, asv.map)
+adonis.table <- do.call(rbind, adonis.results)
 
 ```
 
@@ -98,4 +103,169 @@ lnu_phylum <- ggplot(lnu.phylum.map, aes(x=Treatment, y=counts, fill=NewPhylum))
 lnu_phylum
 
 lnu_phylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/lnu_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+
+ggplot(lnu.phylum.map, aes(x=TimePoint, y=counts, fill=NewPhylum))+
+    labs(x="TimePoint", 
+       y ="Counts",
+       title = "LNU 16S rRNA ASV Profile")+
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  theme_bw() +
+  #theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_grid(Habitat ~ Treatment)
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/lnu_phylum_timepoint.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+# Phylum-level stats - Chaparral - Treatment
+```{r}
+phylum.asv.stats <- lnu.phylum.map
+
+ch.acido_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Acidobacteriota" & Habitat == "Chaparral")
+ch.actino_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Actinobacteriota" & Habitat == "Chaparral")
+ch.bact_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Bacteroidota" & Habitat == "Chaparral")
+ch.chloro_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Chloroflexota" & Habitat == "Chaparral")
+ch.crena_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Crenarchaeota" & Habitat == "Chaparral")
+ch.firm_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Firmicutes" & Habitat == "Chaparral")
+ch.gemma_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Gemmatimonadota" & Habitat == "Chaparral")
+ch.myxo_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Myxococcota" & Habitat == "Chaparral")
+ch.planc_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Planctomycetota" & Habitat == "Chaparral")
+ch.proteo_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Proteobacteria" & Habitat == "Chaparral")
+ch.verru_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Verrucomicrobiota" & Habitat == "Chaparral")
+
+kruskal.test(counts ~ Treatment, ch.acido_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.actino_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.bact_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.chloro_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.crena_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.firm_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.gemma_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.myxo_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.planc_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.proteo_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.verru_phylum.asv)
+```
+
+# Phylum-level stats - Chaparral - Time Series
+```{r}
+b.ch.acido_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Acidobacteriota" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+b.ch.actino_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Actinobacteriota" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+b.ch.bact_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Bacteroidota" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+b.ch.chloro_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Chloroflexota" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+b.ch.crena_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Crenarchaeota" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+b.ch.firm_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Firmicutes" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+b.ch.gemma_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Gemmatimonadota" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+b.ch.myxo_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Myxococcota" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+b.ch.planc_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Planctomycetota" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+b.ch.proteo_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Proteobacteria" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+b.ch.verru_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Verrucomicrobiota" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
+
+kruskal.test(counts ~ TimePoint, b.ch.acido_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.ch.actino_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.ch.bact_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.ch.chloro_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.ch.crena_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.ch.firm_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.ch.gemma_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.ch.myxo_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.ch.planc_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.ch.proteo_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.ch.verru_phylum.asv)
+```
+
+# Phylum-level stats - Woodland - Treatment
+```{r}
+wo.acido_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Acidobacteriota" & Habitat == "Woodland")
+wo.actino_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Actinobacteriota" & Habitat == "Woodland")
+wo.bact_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Bacteroidota" & Habitat == "Woodland")
+wo.chloro_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Chloroflexota" & Habitat == "Woodland")
+wo.crena_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Crenarchaeota" & Habitat == "Woodland")
+wo.firm_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Firmicutes" & Habitat == "Woodland")
+wo.gemma_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Gemmatimonadota" & Habitat == "Woodland")
+wo.myxo_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Myxococcota" & Habitat == "Woodland")
+wo.planc_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Planctomycetota" & Habitat == "Woodland")
+wo.proteo_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Proteobacteria" & Habitat == "Woodland")
+wo.verru_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Verrucomicrobiota" & Habitat == "Woodland")
+
+kruskal.test(counts ~ Treatment, wo.acido_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.actino_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.bact_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.chloro_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.crena_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.firm_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.gemma_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.myxo_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.planc_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.proteo_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.verru_phylum.asv)
+```
+
+# Phylum-level stats - Woodland - Time Series
+```{r}
+b.wo.acido_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Acidobacteriota" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+b.wo.actino_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Actinobacteriota" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+b.wo.bact_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Bacteroidota" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+b.wo.chloro_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Chloroflexota" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+b.wo.crena_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Crenarchaeota" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+b.wo.firm_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Firmicutes" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+b.wo.gemma_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Gemmatimonadota" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+b.wo.myxo_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Myxococcota" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+b.wo.planc_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Planctomycetota" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+b.wo.proteo_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Proteobacteria" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+b.wo.verru_phylum.asv <- phylum.asv.stats %>%
+  filter(Phylum == "Verrucomicrobiota" & Habitat == "Woodland" & Treatment == "AfterBurn_Wildfire")
+
+kruskal.test(counts ~ TimePoint, b.wo.acido_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.wo.actino_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.wo.bact_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.wo.chloro_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.wo.crena_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.wo.firm_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.wo.gemma_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.wo.myxo_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.wo.planc_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.wo.proteo_phylum.asv)
+kruskal.test(counts ~ TimePoint, b.wo.verru_phylum.asv)
 ```
