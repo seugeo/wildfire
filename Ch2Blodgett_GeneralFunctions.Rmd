@@ -1,0 +1,276 @@
+---
+title: "Ch2Blodgett_GeneralFunctions"
+output: html_document
+date: "2024-03-05"
+---
+
+```{r}
+# CUSTOM COLOR PALETTE & ORDERS
+  disturbance_colors <- c("mediumaquamarine", "gold", "darkorange", "red", "maroon")
+  disturbance_order <- c('No', 'Yes_30ºC', 'Yes_60ºC', 'Yes_90ºC', 'Yes_Burn')
+  p_disturbance_colors <- c("mediumaquamarine", "maroon")
+  p_disturbance_order <- c('No', 'Yes_Burn')
+  plot_colors <- c("turquoise3","turquoise4", "chocolate2", "burlywood", "darkorange4", "tomato3")
+  plot_order <- c('U1', 'U2', 'B1', 'B2', 'B3', 'B4')
+  treatment_plot_colors <- c("chocolate2", "burlywood", "darkorange4", "tomato3")
+  treatment_plot_order <- c('B1', 'B2', 'B3', 'B4')
+  treatment_colors <- c("#ff7002", "#92d050")
+  probe_colors <- c("#ffba00","#df4200","#aa0048","#800080")
+  probe_order <- c('Depth1', 'Depth2', 'Depth4', 'Depth6')
+  date_shapes <- c(16,18,0,3,8)
+  date_order <- c('4/5/2021', '4/18/2021', '4/27/2021', '5/8/2021', '4/18/2022')
+  burn_date_order <- c('4/5/2021', '4/18/2021', '4/27/2021', '5/8/2021', '6/20/2021')
+  depth_shapes <- c(16,17)
+  depth_order <- c('0-3cm','3-6cm')
+  depth_colors <- c("brown", "orange")
+  collapsed_phylum_colors <- c("Acidobacteriota" = "#7526C3", "Actinobacteriota" = "#75d644", "Altarchaeota" = "#F9D3D7","Bacteroidota" = "#FAE500", "Bdellovibrionota" = "#0026F9", "Chloroflexota" = "#2665A1", "Cyanobacteria" = "#1CFEDA", "Desulfobacterota" = "#6C328B", "Firmicutes" = "#2ead57", "Gemmatimonadota" = "#84530D", "Halobacteriota" = "#B6EBEF", "Methanobacteriota" = "#CBC279", "Myxococcota" = "#FF942E", "Nitrospirota" = "#909AFE", "Patescibacteria" = "#22CBFD", "Planctomycetota" =  "#fa4668", "Proteobacteria" = "#D78EFC", "Verrucomicrobiota" = "#FE9B95", "Other" = "darkgray")
+  collapsed_phyla_order <- c("Acidobacteriota", "Actinobacteriota", "Altarchaeota", "Bacteroidota", "Bdellovibrionota", "Chloroflexota", "Cyanobacteria", "Desulfobacterota", "Firmicutes", "Gemmatimonadota", "Halobacteriota", "Methanobacteriota", "Myxococcota", "Nitrospirota", "Patescibacteria", "Planctomycetota", "Proteobacteria", "Verrucomicrobiota", "Other")
+  
+# DATA PREPARATION
+# CONVERT COLUMN TO ROWNAMES # make sure to put "" around col and name_values
+col_to_row <- function(data, col, name_values) {
+  # assign reference value to column
+  name_values = data[[col]]
+  # remove whatever column
+  data=data%>%
+    select(-{{col}})
+  # convert to data frame
+  data=data.frame(data)
+  # assign row names (first column) to specified name
+  row.names(data)=name_values
+return(data)}
+# REMOVE SINGLETONS (only appears in one sample)
+rmv_sngl <- function(data) {
+  data <- data[rowSums(data>0) >1,]
+  data <- data[, colSums(data)>0]
+return(data)}
+# RELATIVIZE
+relativize <- function(data) {
+  data.rel=decostand(data, method = "total", MARGIN = 2)
+return(data.rel)}
+
+# FOR PCOA PLOT
+# CALCULATE DISTANCE MATRIX
+distance <- function(data.rel) {
+  data.dist=vegdist(t(data.rel), method = "bray")
+return(data.dist)}
+# CALCULATE PCOA POINTS
+pcoa <- function(data.dist) {
+  data.pcoa=cmdscale(data.dist, eig = TRUE)
+return(data.pcoa)}
+# CREATE DATA FRAME WITH PCOA POINTS
+pcoa.points <- function(data.pcoa) {
+  data.pcoa.points=data.frame(data.pcoa$points)
+  colnames(data.pcoa.points)=c("pcoa1", "pcoa2")
+return(data.pcoa.points)}
+# JOIN METADATA AND PCOA DATA
+pcoa.map <- function(data.pcoa.points,map) {
+  data.pcoa.points$ID <- rownames(data.pcoa.points)
+  data.map=left_join(data.pcoa.points,map,by="ID")
+return(data.map)}
+# RUN PERMANOVAS ON ALL VARIABLES DISTINCTLY AND GET A SUMMARY TABLE
+run_adonis <- function(variables, diss_matrix, data) {
+  results <- lapply(variables, function(var){
+    formula <- as.formula(paste("diss_matrix ~", var))
+    adonis_result <- adonis(formula, data = data)
+  return(adonis_result$aov.tab)})
+return(results)}
+# CALCULATE VARIANCE EXPLAINED
+variance <- function(data.pcoa, x) {
+  data.pcoa$eig[x]/sum(data.pcoa$eig)}
+# PCOA PLOT w/ color=Disturbance and shape=Date
+pcoa.plot.disturbance <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  scale_color_manual(values=disturbance_colors, limits=disturbance_order) +
+  scale_shape_manual(values=date_shapes, limits=date_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 16)) +
+  theme(legend.text = element_text(size = 16), legend.position = "right") +
+  theme(legend.title = element_text(size = 16)) +
+  theme(axis.text = element_text(size = 16)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  p + guides(fill = guide_legend(title.position = "top", ncol = 2))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+# PCOA PLOT w/ color=Disturbance (only in prescribed burn experiment) and shape=Date
+pcoa.plot.p.disturbance <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  scale_color_manual(values=p_disturbance_colors, limits=p_disturbance_order) +
+  scale_shape_manual(values=date_shapes, limits=burn_date_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 16)) +
+  theme(legend.text = element_text(size = 16), legend.position = "right") +
+  theme(legend.title = element_text(size = 16)) +
+  theme(axis.text = element_text(size = 16)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  p + guides(fill = guide_legend(title.position = "top", ncol = 2))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+# PCOA PLOT w/ color=Disturbance and shape=Depth
+pcoa.plot.disturbancedepth <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  scale_color_manual(values=disturbance_colors, limits=disturbance_order) +
+  scale_shape_manual(values=depth_shapes, limits=depth_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 16)) +
+  theme(legend.text = element_text(size = 16), legend.position = "right") +
+  theme(legend.title = element_text(size = 16)) +
+  theme(axis.text = element_text(size = 16)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  p + guides(fill = guide_legend(title.position = "top", ncol = 2))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+# PCOA PLOT w/ color=Disturbance and shape=Depth
+pcoa.plot.p.disturbancedepth <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  scale_color_manual(values=p_disturbance_colors, limits=p_disturbance_order) +
+  scale_shape_manual(values=depth_shapes, limits=depth_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 16)) +
+  theme(legend.text = element_text(size = 16), legend.position = "right") +
+  theme(legend.title = element_text(size = 16)) +
+  theme(axis.text = element_text(size = 16)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  p + guides(fill = guide_legend(title.position = "top", ncol = 2))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+# PCOA PLOT w/ color=Plot and shape=Date
+pcoa.plot.plot <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  scale_color_manual(values=plot_colors, limits=plot_order) +
+  scale_shape_manual(values=date_shapes, limits=date_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 25)) +
+  theme(legend.text = element_text(size = 20), legend.position = "right") +
+  theme(legend.title = element_text(size = 25)) +
+  theme(axis.text = element_text(size = 20)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+# PCOA PLOT w/ color=Plot and shape=Disturbance
+pcoa.plot.plot.disturbance <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  scale_color_manual(values=plot_colors, limits=plot_order) +
+  #scale_shape_manual(values=p_disturbance_colors, limits=p_disturbance_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 25)) +
+  theme(legend.text = element_text(size = 20), legend.position = "right") +
+  theme(legend.title = element_text(size = 25)) +
+  theme(axis.text = element_text(size = 20)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+# PCOA PLOT w/ color=Cluster and shape=Disturbance
+pcoa.disturbance.cluster <- function(data.map, x_col, y_col, color_col, shape_col, x_label = NULL, y_label = NULL, title = "Title", filename = NULL) {
+  p <- ggplot(data.map, aes(x={{x_col}}, y={{y_col}}, color={{color_col}}, shape={{shape_col}}))+
+  geom_point(size = 3) +
+  #scale_color_manual(values=plot_colors, limits=plot_order) +
+  #scale_shape_manual(values=p_disturbance_colors, limits=p_disturbance_order) +
+  labs(x = ifelse(!is.null(x_label), x_label, as_label(enquo(x_col))), 
+       y = ifelse(!is.null(y_label), y_label, as_label(enquo(y_col))),
+       title = title)+
+  theme(axis.title = element_text(size = 25)) +
+  theme(legend.text = element_text(size = 20), legend.position = "right") +
+  theme(legend.title = element_text(size = 25)) +
+  theme(axis.text = element_text(size = 20)) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+  if(!is.null(filename)) {
+    ggsave(filename, plot = p, device = "pdf", width = 220, height = 150, units = "mm", dpi = 500)}
+return(p)}
+
+# FOR DENDROGRAM AND HEAT MAP
+# PREPARE ENVIRONMENTAL DATA
+chemprepare <- function(chem) {
+  chem <- data.frame(chem)
+  rownames(chem) <- chem$SampleID
+  chem <- chem[, -1]
+return(chem)}
+# TRANSFORM ENVIRONMENTAL DATA
+chemtidy <- function(chem) {
+  chem.tidy <- chem %>%
+  mutate(Soil = row.names(.)) %>%
+    gather(key = "Variable", value = "Value", -Soil)
+return(chem.tidy)}
+# GENERATE MATRIX OF Z-TRANSFORMED VARIABLES
+zmatrix <- function(chem.tidy) {
+  chem.mtx <- chem.tidy %>%
+  group_by(Variable) %>%
+  mutate(zValue = (Value - mean(Value))/sd(Value))%>% 
+  select(Soil, Variable, zValue) %>% 
+  spread(key = Variable, value = zValue) %>% 
+  as.data.frame()
+row.names(chem.mtx) <- chem.mtx$Soil
+chem.mtx <- chem.mtx[,-1]
+chem.mtx <- as.matrix(chem.mtx)
+return(chem.mtx)}
+# GENERATE MASTER FILE FOR PLOTTING ENVIRONMENTAL DATA
+envplotter <- function(chem.tidy, samp.labs, chem.labs, variables) {
+  all.nutrients <- chem.tidy %>%
+    group_by(Variable) %>% 
+    mutate(zValue = (Value - mean(Value))/sd(Value)) %>% 
+    inner_join(samp.labs, by = "Soil") %>% 
+    inner_join(chem.labs, by = "Variable") %>% 
+    inner_join(variables, by = "Variable")%>% 
+    ungroup()
+return(all.nutrients)}
+
+# FOR PCA PLOT
+# Z-TRANSFORMED MATRIX FOR PCA PLOT
+nutmtx <- function(chem) {
+  nut.mtx <- chem %>%
+    gather(key = "Variable", value = "Value", -SampleID) %>%
+    group_by(Variable) %>%
+    mutate(zValue = (Value - mean(Value))/sd(Value)) %>% 
+    select(SampleID, Variable, zValue) %>% 
+    spread(key = Variable, value = zValue) %>% 
+    as.data.frame()
+row.names(nut.mtx) <- nut.mtx$SampleID
+return(nut.mtx)}
+# CALCULATE VARIANCE EXPLAINED
+pcavariance <- function(data.pca, x) {
+  data.pca$eig[x]/sum(data.pca$eig)}
+# JOIN METADATA AND PCA DATA
+pca.map <- function(data.pca.points,map) {
+  data.pca.points$SampleID <- rownames(data.pca.points)
+  data.map=left_join(data.pca.points,map,by="SampleID")
+return(data.map)}
+```
+
