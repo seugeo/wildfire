@@ -113,6 +113,12 @@ wildfire_DNA <- read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildf
 # Remove TimePoint 0 (T0)
 wildfire_DNA <- wildfire_DNA[!(wildfire_DNA$TimePoint=="T0"),]
 
+wildfire_DNA <- wildfire_DNA %>%
+  mutate(Treatment = case_when(
+    Treatment == "AfterBurn_Wildfire" ~ "Burn", 
+    Treatment == "AfterBurn_Control" ~ "Control"
+  ))
+
 saveRDS(wildfire_DNA, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_DNA.RDS")
 ```
 

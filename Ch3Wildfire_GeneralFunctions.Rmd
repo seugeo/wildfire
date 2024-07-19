@@ -9,7 +9,7 @@ date: "2024-06-17"
   Treatment_Color <- c("skyblue", "royalblue", "darkorange")
   Treatment_Order <- c('Before Burn', 'AfterBurn_Control', 'AfterBurn_Wildfire')
   Treatment_20_Color <- c("royalblue", "darkorange")
-  Treatment_20_Order <- c('AfterBurn_Control', 'AfterBurn_Wildfire')
+  Treatment_20_Order <- c('Control', 'Burn')
   pf_treatment_color <- c("royalblue", "darkorange")
   pf_treatment_order <- c('AfterBurn_Control', 'AfterBurn_Wildfire')
   Habitat_Color <- c("goldenrod1", "#39A96B")

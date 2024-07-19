@@ -34,36 +34,36 @@ wildfire_DNA <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire
 
 # replacing NA with "0" - the bottom of threshold
 DNA_NA_0 <- wildfire_DNA
-DNA_NA_0[is.na(DNA_NA_0)] <- 0
-ggplot(DNA_NA_0, aes(x = TimePoint, y = DNA, fill = Treatment)) +
+DNA_NA_0$DNA_g[is.na(DNA_NA_0$DNA_g)] <- 0
+ggplot(DNA_NA_0, aes(x = TimePoint, y = DNA_g, fill = Treatment)) +
   geom_boxplot(width = 0.5, outlier.shape=NA, position = position_dodge(width = 0.75)) +
   geom_jitter(aes(color = Habitat), position = position_jitter(width = 0.05), size = 1.5) +
   xlab("Timepoint") +
-  ylab("DNA Yield (ng)") +
+  ylab("DNA yield (ng/g soil)") +
   theme_bw() +
   theme(axis.title = element_text(size = 16)) +
-  theme(legend.position = "bottom", legend.text = element_text(size=16), legend.title = element_text(size=16)) +
+  theme(legend.position = "right", legend.text = element_text(size=16), legend.title = element_text(size=16)) +
   theme(axis.text = element_text(size = 16)) +
   scale_color_manual(values = Habitat_Color) +
-  scale_fill_manual(values = Treatment_20_Color) +
+  scale_fill_manual(values = Treatment_20_Color, limits = Treatment_20_Order) +
   facet_wrap(~ Treatment)
 
-ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/BoxPlot/LNU_DNA_NA_0.pdf", width = 200, height = 120, units = "mm", dpi = 500)
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/BoxPlot/LNU_DNA_NA_0.pdf", width = 200, height = 100, units = "mm", dpi = 500)
 
 # stats on DNA yield 
 # this is where the NA values are replaced with a 0
 DNA_NA_0.stats <- DNA_NA_0
 DNA_NA_0_c_ctrl <- DNA_NA_0.stats %>%
-  filter(Habitat == "Chaparral"&Treatment == "AfterBurn_Control")
+  filter(Habitat == "Chaparral"&Treatment == "Control")
 kruskal.test(DNA ~ TimePoint, DNA_NA_0_c_ctrl)
 DNA_NA_0_c_burn <- DNA_NA_0.stats %>%
-  filter(Habitat == "Chaparral"&Treatment == "AfterBurn_Wildfire")
+  filter(Habitat == "Chaparral"&Treatment == "Burn")
 kruskal.test(DNA ~ TimePoint, DNA_NA_0_c_burn)
 DNA_NA_0_w_ctrl <- DNA_NA_0.stats %>%
-  filter(Habitat == "Woodland"&Treatment == "AfterBurn_Control")
+  filter(Habitat == "Woodland"&Treatment == "Control")
 kruskal.test(DNA ~ TimePoint, DNA_NA_0_w_ctrl)
 DNA_NA_0_w_burn <- DNA_NA_0.stats %>%
-  filter(Habitat == "Woodland"&Treatment == "AfterBurn_Wildfire")
+  filter(Habitat == "Woodland"&Treatment == "Burn")
 kruskal.test(DNA ~ TimePoint, DNA_NA_0_w_burn)
 DNA_NA_0_T3 <- DNA_NA_0.stats %>%
   filter(TimePoint == "T3")
@@ -75,10 +75,10 @@ DNA_NA_0_T5 <- DNA_NA_0.stats %>%
   filter(TimePoint == "T5")
 kruskal.test(DNA ~ Treatment, DNA_NA_0_T5)
 
-# replacing NA with "0.1" - the top of threshold
-DNA_NA_0.1 <- wildfire_DNA
-DNA_NA_0.1[is.na(DNA_NA_0.1)] <- 0.1
-ggplot(DNA_NA_0.1, aes(x = TimePoint, y = DNA, fill = Treatment)) +
+# replacing NA with "0.49" - the top of threshold
+DNA_NA_0.49 <- wildfire_DNA
+DNA_NA_0.49[is.na(DNA_NA_0.49)] <- 0.49
+ggplot(DNA_NA_0.49, aes(x = TimePoint, y = DNA, fill = Treatment)) +
   geom_boxplot(width = 0.5, outlier.shape=NA, position = position_dodge(width = 0.75)) +
   geom_jitter(aes(color = Habitat), position = position_jitter(width = 0.05), size = 1.5) +
   xlab("Timepoint") +
@@ -91,23 +91,23 @@ ggplot(DNA_NA_0.1, aes(x = TimePoint, y = DNA, fill = Treatment)) +
   scale_fill_manual(values = Treatment_20_Color) +
   facet_wrap(~ Treatment)
 
-ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/BoxPlot/LNU_DNA_NA_0.1.pdf", width = 200, height = 120, units = "mm", dpi = 500)
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/BoxPlot/LNU_DNA_NA_0.49.pdf", width = 200, height = 120, units = "mm", dpi = 500)
 
 # stats on DNA yield 
-# this is where the NA values are replaced with a 0.1
-DNA_NA_0.1.stats <- DNA_NA_0.1
-DNA_NA_0.1_c_ctrl <- DNA_NA_0.1.stats %>%
-  filter(Habitat == "Chaparral"&Treatment == "AfterBurn_Control")
-kruskal.test(DNA ~ TimePoint, DNA_NA_0.1_c_ctrl)
-DNA_NA_0.1_c_burn <- DNA_NA_0.1.stats %>%
-  filter(Habitat == "Chaparral"&Treatment == "AfterBurn_Wildfire")
-kruskal.test(DNA ~ TimePoint, DNA_NA_0.1_c_burn)
-DNA_NA_0.1_w_ctrl <- DNA_NA_0.1.stats %>%
-  filter(Habitat == "Woodland"&Treatment == "AfterBurn_Control")
-kruskal.test(DNA ~ TimePoint, DNA_NA_0.1_w_ctrl)
-DNA_NA_0.1_w_burn <- DNA_NA_0.1.stats %>%
-  filter(Habitat == "Woodland"&Treatment == "AfterBurn_Wildfire")
-kruskal.test(DNA ~ TimePoint, DNA_NA_0.1_w_burn)
+# this is where the NA values are replaced with a 0.49
+DNA_NA_0.49.stats <- DNA_NA_0.49
+DNA_NA_0.49_c_ctrl <- DNA_NA_0.49.stats %>%
+  filter(Habitat == "Chaparral"&Treatment == "Control")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0.49_c_ctrl)
+DNA_NA_0.49_c_burn <- DNA_NA_0.49.stats %>%
+  filter(Habitat == "Chaparral"&Treatment == "Burn")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0.49_c_burn)
+DNA_NA_0.49_w_ctrl <- DNA_NA_0.49.stats %>%
+  filter(Habitat == "Woodland"&Treatment == "Control")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0.49_w_ctrl)
+DNA_NA_0.49_w_burn <- DNA_NA_0.49.stats %>%
+  filter(Habitat == "Woodland"&Treatment == "Burn")
+kruskal.test(DNA ~ TimePoint, DNA_NA_0.49_w_burn)
 ```
 
 # PCoA of Entire Dataset
