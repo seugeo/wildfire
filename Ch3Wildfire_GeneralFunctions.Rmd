@@ -7,7 +7,7 @@ date: "2024-06-17"
 ```{r}
 # CUSTOM COLOR PALETTE & ORDERS
   Treatment_Color <- c("skyblue", "royalblue", "darkorange")
-  Treatment_Order <- c('Before Burn', 'AfterBurn_Control', 'AfterBurn_Wildfire')
+  Treatment_Order <- c('Before_Burn', 'AfterBurn_Control', 'AfterBurn_Wildfire')
   Treatment_20_Color <- c("royalblue", "darkorange")
   Treatment_20_Order <- c('Control', 'Burn')
   pf_treatment_color <- c("royalblue", "darkorange")

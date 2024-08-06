@@ -67,9 +67,11 @@ variables <- tribble(~Variable, ~Variable2,
 ```{r}
 # Prep dataframe
 w.chem.ID=chem_wildfire%>%
-  select(-OrganicNRelease, -OrganicPRelease, -SoilHealthCalculation, -OrganicNInorganicN, -WDRFBuffer, -OrganicNReserve, -OrganicPReserve, -SampleID, -Date, -TotalDNAID, -Timepoint, -Location, -Habitat, -Plot, -SubPlot, -Treatment, -ASV_ID)
+  select(-OrganicNRelease, -OrganicPRelease, -SoilHealthCalculation, -OrganicNInorganicN, -WDRFBuffer, -OrganicNReserve, -OrganicPReserve, -SampleID, -Date, -TotalDNAID, -Timepoint, -Location, -Habitat, -Plot, -SubPlot, -Treatment, -ASV_ID, -DaysAfterFire)
 
 # Remove variables with no variation, z-transform each variable, and format it as a matrix
+# THIS INCLUDES THE CHEMICAL PROPERTIES FROM T1, SO A LOT ARE MISSING (because we did A&L for T1)
+# I need to redo this by removing T1 as well
 w.nut.mtx <- nutmtx(w.chem.ID)
 w.chem.map <- chem_wildfire[, -c(10:45)]
 w.chem.map = left_join(w.chem.map,w.nut.mtx,by="ViromeID")
@@ -176,11 +178,7 @@ p <- pheatmap(cor_values_subset,
    color = colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(100),
   display_numbers = FALSE)
 
-# Modify row and column labels to include "*" for significant correlations
-p$tree_row$labels <- paste0(p$tree_row$labels, ifelse(cor(row(cor_values_subset)) < 0.05, "*", ""))
-p$tree_col$labels <- paste0(p$tree_col$labels, ifelse(cor(col(cor_values_subset)) < 0.05, "*", ""))
-
-ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch2Blodgett/R_Figures/pdf/HeatMap_Dendrogram/correlation_heatmap.pdf",
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/HeatMap_Dendrogram/virome_correlation_heatmap.pdf",
        plot = p$gtable, width = 10, height = 8)
 ```
 
@@ -207,12 +205,14 @@ w <- ggplot(w.map.pca, aes(x=pca1, y=pca2, color=Treatment, shape = Habitat, fra
   xlab("PCA1, 39.07% Variance Explained")+
   ylab("PCA2, 15.11% Variance Explained")+
   ggtitle("PCA of Environmental Data - LNU Dataset") +
-  scale_color_manual(values=Treatment_20_Color, limits=Treatment_20_Order) +
+  scale_color_manual(values=pf_treatment_color, limits=pf_treatment_order) +
   theme_bw() +
   theme(axis.title = element_text(size = 18)) +
   theme(legend.text = element_text(size = 20)) +
   theme(legend.title = element_text(size = 20)) +
   theme(axis.text = element_text(size = 15))
+
+### ADD LOADINGS
 
 ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCA/LNU_PCA.pdf", width = 200, height = 125, units = "mm", dpi = 500)
 
@@ -229,11 +229,66 @@ w_habitat <- ggplot(w.map.pca, aes(x=pca1, y=pca2, color=Habitat, shape = Locati
   theme(axis.text = element_text(size = 15))
 ```
 
+#REDO PCA WITH PRINCOMP
+```{r}
+pca.w.nut.mtx <- as.data.frame(w.nut.mtx) %>%
+  select(Moisture, SoilpH, OrganicMatter, AvailableP, Calcium, Magnesium, Potassium, Sodium)
+pca_fit <- princomp(pca.w.nut.mtx, cor = TRUE)
+scores <- as.data.frame(pca_fit$scores)
+scores$Comp.1 <- -scores$Comp.1
+pca_variance <- pca_fit$sdev^2 / sum(pca_fit$sdev^2)
+w_pca_scores <- scores %>%
+  select(Comp.1, Comp.2)
+w_pca_scores <- rownames_to_column(w_pca_scores, var = "SampleID")
+w_pca_map <- chem_wildfire %>%
+  select(Location, Habitat, Treatment, Plot, SubPlot, Date, Timepoint, DaysAfterFire, ViromeID)
+w_pca_map <- w_pca_map %>%
+   rename(SampleID = ViromeID)
+w_pca_map=left_join(w_pca_map,w_pca_scores,by="SampleID")
+loadings <- as.data.frame(pca_fit$loadings[, 1:2])
+loadings$Comp.1 <- -loadings$Comp.1
+w_pca_map$Habitat <- as.factor(w_pca_map$Habitat)
+print(names(w_pca_map))
+print(names(loadings))
+print(head(w_pca_map))
+print(head(loadings))
+library(ggnewscale)
+
+pca_plot <- ggplot(w_pca_map, aes(x = Comp.1, y = Comp.2, color = Treatment)) +
+  geom_point(size = 3) + # Plot individual samples
+  scale_color_manual(values = pf_treatment_color, limits = pf_treatment_order) +
+  geom_segment(data = loadings,
+              aes(x = 0, y = 0, xend = Comp.1 * 6, yend = Comp.2 * 6),  # Scale the vectors for better visibility
+              arrow = arrow(length = unit(0.2, "cm")),
+              color = "black", linewidth = 0.5, alpha = 0.25) +
+  geom_text(data = loadings, 
+            aes(x = Comp.1 * 6, y = Comp.2 * 6, label = rownames(loadings)), 
+            vjust = 1.5, color = "black") +
+  labs(title = "PCA Plot with Variable Vectors",
+       x = "PCA1, 34.14% Variance Explained",
+       y = "PCA2, 18.83% Variance Explained") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title.x = element_text(size = 18),
+    axis.title.y = element_text(size = 18),
+    axis.text.x = element_text(size = 18),
+    axis.text.y = element_text(size = 18),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 18), 
+    legend.position = "bottom"
+  )
+
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCA/LNU_PCA.pdf", width = 220, height = 150, units = "mm", dpi = 500)
+```
+
+
 # DISTANCE DATA
 ```{r}
-wildfire_map_095 <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/wildfire_map_095.RDS")
+wildfire_map_all <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_map_all.RDS")
 
-wildfire_gps <- wildfire_map_095 %>%
+wildfire_gps <- wildfire_map_all %>%
   mutate(longitude = case_when(
     Plot == "MC1" ~ "-122.340161", 
     Plot == "MC2" ~ "-122.342634",
@@ -246,7 +301,14 @@ wildfire_gps <- wildfire_map_095 %>%
     Plot == "QC1" ~ "-122.14871", 
     Plot == "QC2" ~ "-122.151743",
     Plot == "QW1" ~ "-122.149034", 
-    Plot == "QW2" ~ "-122.151481"))
+    Plot == "QW2" ~ "-122.151481", 
+    SubPlot == "McL_1_1" ~ "-122.426317",
+    SubPlot == "McL_1_2" ~ "-122.425650",
+    SubPlot == "McL_6_1" ~ "-122.450933",
+    SubPlot == "McL_6_2" ~ "-122.450933",
+    SubPlot == "QR_1_1" ~ "-122.135167",
+    SubPlot == "QR_1_2" ~ "-122.148317",
+    SubPlot == "QR_2_2" ~ "-122.148700"))
 
 wildfire_gps <- wildfire_gps %>%
   mutate(latitude = case_when(
@@ -261,7 +323,14 @@ wildfire_gps <- wildfire_gps %>%
     Plot == "QC1" ~ "38.482902", 
     Plot == "QC2" ~ "38.482457",
     Plot == "QW1" ~ "38.483063", 
-    Plot == "QW2" ~ "38.48313"))
+    Plot == "QW2" ~ "38.48313", 
+    SubPlot == "McL_1_1" ~ "38.874650",
+    SubPlot == "McL_1_2" ~ "38.874550",
+    SubPlot == "McL_6_1" ~ "38.882317",
+    SubPlot == "McL_6_2" ~ "38.882233",
+    SubPlot == "QR_1_1" ~ "38.482867",
+    SubPlot == "QR_1_2" ~ "38.482817", 
+    SubPlot == "QR_2_2" ~ "38.483150"))
 
 quail_gps <- wildfire_gps[!(wildfire_gps$Location=="McLaughlin"),] 
 quail_locations <- quail_gps %>%
@@ -310,7 +379,7 @@ library(prettymapr)
 sample_sf <- st_as_sf(wildfire_sample_locations, coords = c("longitude", "latitude"), crs = 4326)
 ggplot() +
   annotation_map_tile(type = "osm", zoom = 13) +
-  geom_sf(data = sample_sf, aes(geometry = geometry), color = "black", size = 2, alpha = 0.75) +
+  geom_sf(data = sample_sf, aes(geometry = geometry), color = "black", size = 1.25) +
   annotation_scale(location = "bl", width_hint = 0.5) +  # Adding a scale bar
   annotation_north_arrow(location = "tl", which_north = "true", 
                          pad_x = unit(1.7, "in"), pad_y = unit(0.05, "in"),
@@ -330,6 +399,9 @@ ggplot() +
 ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Maps/full_map.pdf", width = 200, height = 125, units = "mm", dpi = 500)
 
 # Quail Ridge Subset
+add_rows <- data.frame(Plot = c("x", "y"), longitude = c(-122.1486449, -122.148692), latitude = c(38.48450498,38.480886))
+quail_locations <- rbind(quail_locations, add_rows)
+
 quail_sf <- st_as_sf(quail_locations, coords = c("longitude", "latitude"), crs = 4326)
 
 

@@ -16,6 +16,9 @@ library(ComplexUpset)
 
 # Load RDS files
 lnu.asv <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu.asv.RDS")
+
+#write.csv(lnu.asv, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/Journal Submission/lnu.asv.csv", row.names = TRUE)
+
 tax_filtered <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/tax_filtered.RDS")
 wildfire_asv_map <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_asv_map.RDS")
 ```
@@ -45,6 +48,22 @@ asv.map <- pcoa.map.asv(asv.pcoa.points, wildfire_asv_map)
 variance(asv.pcoa, 1)
 variance(asv.pcoa, 2)
 
+ggplot(asv.map, aes(x=pcoa1, y=pcoa2, color=Treatment, shape = Habitat))+
+  geom_point(size = 3) +
+  labs(x = "PCo1 (20.89% Variance Explained)", 
+       y = "PCo2 (11.47% Variance Explained)",
+       title = "All LNU 16S")+
+  theme(axis.title = element_text(size = 18)) +
+  theme(legend.text = element_text(size = 18), legend.position = "right") +
+  theme(legend.title = element_text(size = 18)) +
+  theme(axis.text = element_text(size = 18)) +
+  scale_color_manual(values=pf_treatment_color, limits=pf_treatment_order) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_treatment_habitat.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+
 pcoa.treatment.habitat(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "20.89% Variance Explained", y_label = "11.47% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_treatment_habitat.pdf")
 
 pcoa.treatment.time(asv.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = TimePoint, x_label = "20.89% Variance Explained", y_label = "11.47% Variance Explained", title = "All LNU 16S rRNA ASV Profile", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_treatment_time.pdf")
@@ -56,6 +75,57 @@ variables <- c("Habitat", "Treatment", "Location")
 adonis.results <- run_adonis(variables, asv.dist, asv.map)
 adonis.table <- do.call(rbind, adonis.results)
 
+```
+
+# Subset data
+# Only T3-T5 for burn vs. control direct comparisons (Chaparral)
+```{r}
+bc.ch.asv <- lnu.asv[, wildfire_asv_map$TimePoint %in% c("T3", "T4", "T5") & wildfire_asv_map$Habitat=="Chaparral"] 
+
+# create rarefaction curve to determine rarefaction threshold for abundance table
+# don't need to run the below code every time, only the first time to figure out what to rarefy to
+#asv.rarecurve <- rarecurve(t(bc.ch.asv), step = 100) 
+#x <- map_dfr(asv.rarecurve, bind_rows) %>% bind_cols(colnames(bc.ch.asv),.)
+#x <- as.data.frame(x)
+#row.names(x) <- x[, 1]
+
+#based on x dataframe, choose sample size to rarefy to
+set.seed(24)
+bc.ch.asv.rare <- t(rrarefy(t(bc.ch.asv), sample = 17700))
+
+# remove singletons --> 2,475 contigs
+bc.ch.asv.rare <- data.frame(bc.ch.asv.rare) %>%
+  rmv_sngl()
+
+bc.ch_map <- subset(wildfire_asv_map, TimePoint %in% c("T3", "T4", "T5") & Habitat == "Chaparral")
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(bc.ch.asv), bc.ch_map$ASV_ID)
+```
+
+# Only T3-T5 for burn vs. control direct comparisons (Woodland)
+```{r}
+bc.wo.asv <- lnu.asv[, wildfire_asv_map$TimePoint %in% c("T3", "T4", "T5") & wildfire_asv_map$Habitat=="Woodland"] 
+
+# create rarefaction curve to determine rarefaction threshold for abundance table
+# don't need to run the below code every time, only the first time to figure out what to rarefy to
+#asv.rarecurve <- rarecurve(t(bc.wo.asv), step = 100) 
+#x <- map_dfr(asv.rarecurve, bind_rows) %>% bind_cols(colnames(bc.wo.asv),.)
+#x <- as.data.frame(x)
+#row.names(x) <- x[, 1]
+
+#based on x dataframe, choose sample size to rarefy to
+set.seed(24)
+bc.wo.asv.rare <- t(rrarefy(t(bc.wo.asv), sample = 18700))
+
+# remove singletons --> 2,515 contigs
+bc.wo.asv.rare <- data.frame(bc.wo.asv.rare) %>%
+  rmv_sngl()
+
+bc.wo_map <- subset(wildfire_asv_map, TimePoint %in% c("T3", "T4", "T5") & Habitat == "Woodland")
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(bc.wo.asv), bc.wo_map$ASV_ID)
 ```
 
 # Taxonomy Stacked Bar Plot: ALL DATA (2021 + 2022)
@@ -73,7 +143,7 @@ unique(tax_lnu$Phylum)
 # pivot table and group by Phylum
 tax_lnu.long <- pivot_longer(tax_lnu, cols=1:87, names_to = "ASV_ID", values_to = "counts")
 lnu.phylum.long <- group_by(tax_lnu.long, Phylum, ASV_ID) %>%
-  summarize(counts=sum(counts))
+  dplyr::summarize(counts=sum(counts))
 
 # collapse phyla into "other" category if represents less than 2%, which is 354 (rarefied to 17,700)
 lnu.phylum.long$Phylum <- as.character(lnu.phylum.long$Phylum)
@@ -115,7 +185,112 @@ ggplot(lnu.phylum.map, aes(x=TimePoint, y=counts, fill=NewPhylum))+
   facet_grid(Habitat ~ Treatment)
 
 ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/lnu_phylum_timepoint.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+
+burn_lnu.phylum.map <- lnu.phylum.map[(lnu.phylum.map$Treatment=="AfterBurn_Wildfire"),]
+
+control_lnu.phylum.map <- lnu.phylum.map[(lnu.phylum.map$Treatment=="AfterBurn_Control"),]
+
+
+### PUT LINE BETWEEN TIMEPOINTS
+
+ggplot(burn_lnu.phylum.map, aes(x=TimePoint_ID, y=counts, fill=NewPhylum))+
+    labs(x="TimePoint", 
+       y ="Counts",
+       title = "LNU 16S rRNA ASV Profile")+
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(4.5, 8.5, 16.5, 24.5), linetype = "solid", color = "grey20", linewidth = 0.15)+
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_grid(~Habitat)
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/prokaryotes/burn_lnu_phylum_timepoint.pdf", width = 300, height = 150, units = "mm", dpi = 500)
+
+ggplot(control_lnu.phylum.map, aes(x=TimePoint_ID, y=counts, fill=NewPhylum))+
+    labs(x="TimePoint", 
+       y ="Counts",
+       title = "LNU 16S rRNA ASV Profile")+
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(4.5, 8.5, 16.5), linetype = "solid", color = "grey20", linewidth = 0.15)+
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_grid(~Habitat)
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/prokaryotes/control_lnu_phylum_timepoint.pdf", width = 300, height = 150, units = "mm", dpi = 500)
+
+
+lnu.phylum.relabd <- lnu.phylum.map %>%
+  group_by(ASV_ID) %>%
+  mutate(RelAbd = counts / 17700)
+
+lnu.phylum.avg <- lnu.phylum.relabd %>%
+  group_by(DaysAfterFire, NewPhylum, Habitat, Treatment) %>%
+  dplyr::summarize(MeanRelAbd = mean(RelAbd, na.rm = TRUE))
+
+ggplot(lnu.phylum.avg, aes(x=DaysAfterFire, y=MeanRelAbd, color=NewPhylum, group=NewPhylum))+
+    labs(x="Time Since Fire (Days)", 
+       y ="Mean Relative Abundance",
+       title = "LNU 16S rRNA ASV Profile")+
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values=collapsed_phylum_colors) +
+  theme_bw() +
+  #theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_grid(Habitat ~ Treatment)
 ```
+
+# Taxonomy Stacked Bar - Chaparral, Burn vs Control (T3, T4, T5)
+```{r}
+# add OTU_ID back onto asv.rare
+bc.ch.asv.rare$OTU_ID <- rownames(bc.ch.asv.rare)
+
+# Join taxonomy and abundance data together
+bc.ch.tax_lnu <- left_join(bc.ch.asv.rare, tax_filtered, by = "OTU_ID")
+# make sure asv.rare is in the same order as tax_lnu (return = TRUE)
+check_column <- "OTU_ID"
+all(bc.ch.asv.rare[[check_column]] == bc.ch.tax_lnu[[check_column]])
+unique(bc.ch.tax_lnu$Phylum)
+
+# pivot table and group by Phylum
+bc.ch.tax_lnu.long <- pivot_longer(bc.ch.tax_lnu, cols=1:35, names_to = "ASV_ID", values_to = "counts")
+bc.ch.lnu.phylum.long <- group_by(bc.ch.tax_lnu.long, Phylum, ASV_ID) %>%
+  dplyr::summarize(counts=sum(counts))
+
+# collapse phyla into "other" category if represents less than 2%, which is 354 (rarefied to 17,700)
+bc.ch.lnu.phylum.long$Phylum <- as.character(bc.ch.lnu.phylum.long$Phylum)
+bc.ch.lnu.phylum.long <- bc.ch.lnu.phylum.long %>%
+  group_by(Phylum) %>%
+  mutate(NewPhylum = ifelse(all(counts < 354), 'Other', Phylum)) %>%
+  ungroup()
+# find out which phyla are represented (used for making legend)
+unique(bc.ch.lnu.phylum.long$NewPhylum)
+
+bc.ch_map <- bc.ch_map %>%
+  mutate(Time_Treatment_ID = paste(TimePoint, "-", Treatment, "-", SubPlot)) %>%
+  arrange(Time_Treatment_ID)
+# Prep data frame for plotting
+bc.ch.lnu.phylum.map <- merge(bc.ch.lnu.phylum.long, bc.ch_map, by="ASV_ID")
+
+
+ggplot(bc.ch.lnu.phylum.map, aes(x=Time_Treatment_ID, y=counts, fill=NewPhylum))+
+    labs(x="TimePoint", 
+       y ="Counts",
+       title = "LNU - Chaparral - burn vs. control - 16S rRNA ASV Profile")+
+   annotate('rect', xmin = -Inf, xmax = 4.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
+  annotate('rect', xmin = 12.5, xmax = 16.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
+  annotate('rect', xmin = 24.5, xmax = 28.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  scale_x_discrete(labels = bc.ch_map$TimePoint_ID) +
+  geom_vline(xintercept = c(12.5, 24.5), linetype = "solid", color = "grey20", linewidth = 0.25)+
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/prokaryotes/burn_control_chaparral.pdf", width = 300, height = 150, units = "mm", dpi = 500)
+```
+
+
 # Phylum-level stats - Chaparral - Treatment
 ```{r}
 phylum.asv.stats <- lnu.phylum.map
@@ -182,6 +357,11 @@ b.ch.verru_phylum.asv <- phylum.asv.stats %>%
   filter(Phylum == "Verrucomicrobiota" & Habitat == "Chaparral" & Treatment == "AfterBurn_Wildfire")
 
 kruskal.test(counts ~ TimePoint, b.ch.acido_phylum.asv)
+cor.test(b.ch.acido_phylum.asv$TimePoint, b.ch.acido_phylum.asv$counts, method = "spearman")
+
+
+
+
 kruskal.test(counts ~ TimePoint, b.ch.actino_phylum.asv)
 kruskal.test(counts ~ TimePoint, b.ch.bact_phylum.asv)
 kruskal.test(counts ~ TimePoint, b.ch.chloro_phylum.asv)
@@ -192,6 +372,56 @@ kruskal.test(counts ~ TimePoint, b.ch.myxo_phylum.asv)
 kruskal.test(counts ~ TimePoint, b.ch.planc_phylum.asv)
 kruskal.test(counts ~ TimePoint, b.ch.proteo_phylum.asv)
 kruskal.test(counts ~ TimePoint, b.ch.verru_phylum.asv)
+```
+
+# Taxonomy Stacked Bar - Woodland, Burn vs Control (T3, T4, T5)
+```{r}
+# add OTU_ID back onto asv.rare
+bc.wo.asv.rare$OTU_ID <- rownames(bc.wo.asv.rare)
+
+# Join taxonomy and abundance data together
+bc.wo.tax_lnu <- left_join(bc.wo.asv.rare, tax_filtered, by = "OTU_ID")
+# make sure asv.rare is in the same order as tax_lnu (return = TRUE)
+check_column <- "OTU_ID"
+all(bc.wo.asv.rare[[check_column]] == bc.wo.tax_lnu[[check_column]])
+unique(bc.wo.tax_lnu$Phylum)
+
+# pivot table and group by Phylum
+bc.wo.tax_lnu.long <- pivot_longer(bc.wo.tax_lnu, cols=1:36, names_to = "ASV_ID", values_to = "counts")
+bc.wo.lnu.phylum.long <- group_by(bc.wo.tax_lnu.long, Phylum, ASV_ID) %>%
+  dplyr::summarize(counts=sum(counts))
+
+# collapse phyla into "other" category if represents less than 2%, which is 374 (rarefied to 18,700)
+bc.wo.lnu.phylum.long$Phylum <- as.character(bc.wo.lnu.phylum.long$Phylum)
+bc.wo.lnu.phylum.long <- bc.wo.lnu.phylum.long %>%
+  group_by(Phylum) %>%
+  mutate(NewPhylum = ifelse(all(counts < 374), 'Other', Phylum)) %>%
+  ungroup()
+# find out which phyla are represented (used for making legend)
+unique(bc.wo.lnu.phylum.long$NewPhylum)
+
+bc.wo_map <- bc.wo_map %>%
+  mutate(Time_Treatment_ID = paste(TimePoint, "-", Treatment, "-", SubPlot)) %>%
+  arrange(Time_Treatment_ID)
+# Prep data frame for plotting
+bc.wo.lnu.phylum.map <- merge(bc.wo.lnu.phylum.long, bc.wo_map, by="ASV_ID")
+
+
+ggplot(bc.wo.lnu.phylum.map, aes(x=Time_Treatment_ID, y=counts, fill=NewPhylum))+
+    labs(x="TimePoint", 
+       y ="Counts",
+       title = "LNU - Woodland - burn vs. control - 16S rRNA ASV Profile")+
+  annotate('rect', xmin = -Inf, xmax = 4.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
+  annotate('rect', xmin = 12.5, xmax = 16.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
+  annotate('rect', xmin = 24.5, xmax = 28.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  scale_x_discrete(labels = bc.wo_map$TimePoint_ID) +
+  geom_vline(xintercept = c(12.5, 24.5), linetype = "solid", color = "grey20", linewidth = 0.25)+
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/prokaryotes/burn_control_woodland.pdf", width = 300, height = 150, units = "mm", dpi = 500)
 ```
 
 # Phylum-level stats - Woodland - Treatment

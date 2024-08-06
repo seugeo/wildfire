@@ -84,6 +84,9 @@ saveRDS(otu_filtered, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R
 #load mapping data to subset within wildfire dataset 
 #subset mapping data
 wildfire_map <- read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/QuailMcL_Metadata.txt", delim = "\t", col_names = TRUE)
+wildfire_map_all <- wildfire_map
+saveRDS(wildfire_map_all, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_map_all.RDS")
+
 wildfire_map <- wildfire_map[!(wildfire_map$Virome=="no"),]
 
 # make sure mapping file has sample names (rownames) in ascending order
@@ -186,7 +189,7 @@ saveRDS(lnu.asv, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figu
 #load mapping data to subset within wildfire dataset 
 #subset mapping data
 wildfire_map <- read_delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/QuailMcL_Metadata.txt", delim = "\t", col_names = TRUE)
-wildfire_map <- wildfire_map[!(wildfire_map$Date=="11/1/2019"),]
+wildfire_map <- wildfire_map[!(wildfire_map$Date=="11/15/2019"),]
 
 # make sure mapping file has sample names (rownames) in ascending order
 wildfire_map <- wildfire_map[order(wildfire_map$ASV_ID), ]
@@ -213,13 +216,14 @@ chem_wildfire <- chem_wildfire %>%
 
 chem_wildfire <- chem_wildfire %>%
   mutate(Timepoint = case_when(
-    Date == "1/13/2021" ~ "T1",
-    Date == "3/11/2021" ~ "T2",
-    Date == "3/12/2021" ~ "T2",
-    Date == "5/16/2021" ~ "T3",
-    Date == "5/17/2021" ~ "T3",
-    Date == "8/10/2021" ~ "T4", 
-    Date == "8/9/2021" ~ "T4"))
+    Date == "11/4/2020" ~ "T1",
+    Date == "1/13/2021" ~ "T2",
+    Date == "3/11/2021" ~ "T3",
+    Date == "3/12/2021" ~ "T3",
+    Date == "5/16/2021" ~ "T4",
+    Date == "5/17/2021" ~ "T4",
+    Date == "8/10/2021" ~ "T5", 
+    Date == "8/9/2021" ~ "T5"))
 
 saveRDS(chem_wildfire, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/chem_wildfire.RDS")
 ```

@@ -32,18 +32,23 @@ identical(colnames(lnu_otu), wildfire_data$ViromeID)
 ```{r}
 wildfire_DNA <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_DNA.RDS")
 
+wildfire_DNA <- wildfire_DNA %>%
+  mutate(Time_Days = paste(TimePoint, "/", DaysAfterFire))
+
+
 # replacing NA with "0" - the bottom of threshold
 DNA_NA_0 <- wildfire_DNA
 DNA_NA_0$DNA_g[is.na(DNA_NA_0$DNA_g)] <- 0
-ggplot(DNA_NA_0, aes(x = TimePoint, y = DNA_g, fill = Treatment)) +
+ggplot(DNA_NA_0, aes(x = Time_Days, y = DNA_g, fill = Treatment)) +
   geom_boxplot(width = 0.5, outlier.shape=NA, position = position_dodge(width = 0.75)) +
   geom_jitter(aes(color = Habitat), position = position_jitter(width = 0.05), size = 1.5) +
-  xlab("Timepoint") +
+  xlab("Timepoint / Days Since Fire") +
   ylab("DNA yield (ng/g soil)") +
   theme_bw() +
   theme(axis.title = element_text(size = 16)) +
   theme(legend.position = "right", legend.text = element_text(size=16), legend.title = element_text(size=16)) +
   theme(axis.text = element_text(size = 16)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_color_manual(values = Habitat_Color) +
   scale_fill_manual(values = Treatment_20_Color, limits = Treatment_20_Order) +
   facet_wrap(~ Treatment)
@@ -81,12 +86,13 @@ DNA_NA_0.49[is.na(DNA_NA_0.49)] <- 0.49
 ggplot(DNA_NA_0.49, aes(x = TimePoint, y = DNA, fill = Treatment)) +
   geom_boxplot(width = 0.5, outlier.shape=NA, position = position_dodge(width = 0.75)) +
   geom_jitter(aes(color = Habitat), position = position_jitter(width = 0.05), size = 1.5) +
-  xlab("Timepoint") +
+  xlab("Timepoint / Days Since Fire") +
   ylab("DNA Yield (ng)") +
   theme_bw() +
   theme(axis.title = element_text(size = 16)) +
   theme(legend.position = "bottom", legend.text = element_text(size=16), legend.title = element_text(size=16)) +
   theme(axis.text = element_text(size = 16)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_color_manual(values = Habitat_Color) +
   scale_fill_manual(values = Treatment_20_Color) +
   facet_wrap(~ Treatment)
@@ -126,7 +132,23 @@ variance(otu.pcoa, 1)
 variance(otu.pcoa, 2)
 
 # Treatment + Habitat
-pcoa.treatment.habitat(otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "10.24% Variance Explained", y_label = "6.61% Variance Explained", title = "LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/lnu_Pb_otu_treatment_habitat.pdf")
+pcoa.treatment.habitat(otu.map, x_col = pcoa1, y_col = pcoa2, color_col= Treatment, shape_col = Habitat, x_label = "PCo1 (10.24% Variance Explained)", y_label = "PCo2 (6.61% Variance Explained)", title = "LNU Viromes", filename = "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/lnu_Pb_otu_treatment_habitat.pdf")
+
+ggplot(otu.map, aes(x=pcoa1, y=pcoa2, color=Treatment, shape = Habitat))+
+  geom_point(size = 3) +
+  labs(x = "PCo1 (10.24% Variance Explained)", 
+       y = "PCo2 (6.61% Variance Explained)",
+       title = "All LNU Viromes")+
+  theme(axis.title = element_text(size = 18)) +
+  theme(legend.text = element_text(size = 18), legend.position = "right") +
+  theme(legend.title = element_text(size = 18)) +
+  theme(axis.text = element_text(size = 18)) +
+  scale_color_manual(values=Treatment_Color, limits=Treatment_Order) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/lnu_Pb_otu_treatment_habitat.pdf", width = 200, height = 125, units = "mm", dpi = 500)
 
 # run PERMANOVAs
 variables <- c("Habitat", "Treatment", "Location")
@@ -194,6 +216,32 @@ ch.map$Richness <- richness
 # make sure IDs are identical in abundance and metadata tables
 identical(colnames(ch.otu.rel), ch.map$ViromeID)
 ```
+# Chaparral, burned only (f.ch - fire, chaparral) and only with LNU clustered dataset (not clustered with PIGEON or blodgett)
+```{r}
+f.ch.otu <- lnu_otu[, wildfire_data$Habitat=="Chaparral" & wildfire_data$Treatment=="AfterBurn_Wildfire"] %>%
+  rmv_sngl()
+f.ch.otu.rel <- relativize(f.ch.otu)
+colSums(f.ch.otu.rel)
+f.ch.map <- subset(wildfire_data, Habitat=="Chaparral" & wildfire_data$Treatment=="AfterBurn_Wildfire")
+richness <- colSums(f.ch.otu.rel > 0)
+f.ch.map$Richness <- richness
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(f.ch.otu.rel), f.ch.map$ViromeID)
+```
+# Chaparral, T3 only (T3.ch - T3, chaparral) and only with LNU clustered dataset (not clustered with PIGEON or blodgett)
+```{r}
+T3.ch.otu <- lnu_otu[, wildfire_data$Habitat=="Chaparral" & wildfire_data$TimePoint=="T3"] %>%
+  rmv_sngl()
+T3.ch.otu.rel <- relativize(T3.ch.otu)
+colSums(T3.ch.otu.rel)
+T3.ch.map <- subset(wildfire_data, Habitat=="Chaparral" & wildfire_data$TimePoint=="T3")
+richness <- colSums(T3.ch.otu.rel > 0)
+T3.ch.map$Richness <- richness
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(T3.ch.otu.rel), T3.ch.map$ViromeID)
+```
 # Woodland only (wo - woodland) and only with LNU clustered dataset (not clustered with PIGEON or blodgett)
 ```{r}
 wo.otu <- lnu_otu[, wildfire_data$Habitat=="Woodland"] %>%
@@ -206,6 +254,32 @@ wo.map$Richness <- richness
 
 # make sure IDs are identical in abundance and metadata tables
 identical(colnames(wo.otu.rel), wo.map$ViromeID)
+```
+# Woodland, burned only (f.wo - fire, woodland) and only with LNU clustered dataset (not clustered with PIGEON or blodgett)
+```{r}
+f.wo.otu <- lnu_otu[, wildfire_data$Habitat=="Woodland" & wildfire_data$Treatment=="AfterBurn_Wildfire"] %>%
+  rmv_sngl()
+f.wo.otu.rel <- relativize(f.wo.otu)
+colSums(f.wo.otu.rel)
+f.wo.map <- subset(wildfire_data, Habitat=="Woodland" & wildfire_data$Treatment=="AfterBurn_Wildfire")
+richness <- colSums(f.wo.otu.rel > 0)
+f.wo.map$Richness <- richness
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(f.wo.otu.rel), f.wo.map$ViromeID)
+```
+# Woodland, T3 only (T3.wo - T3, Woodland) and only with LNU clustered dataset (not clustered with PIGEON or blodgett)
+```{r}
+T3.wo.otu <- lnu_otu[, wildfire_data$Habitat=="Woodland" & wildfire_data$TimePoint=="T3"] %>%
+  rmv_sngl()
+T3.wo.otu.rel <- relativize(T3.wo.otu)
+colSums(T3.wo.otu.rel)
+T3.wo.map <- subset(wildfire_data, Habitat=="Woodland" & wildfire_data$TimePoint=="T3")
+richness <- colSums(T3.wo.otu.rel > 0)
+T3.wo.map$Richness <- richness
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(T3.wo.otu.rel), T3.wo.map$ViromeID)
 ```
 # PCoA of Subset Samples
 # PCoA of Post Fire Samples (pf)
@@ -421,6 +495,7 @@ ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Up
 ```
 
 # Identifying source of vOTUs originally found in other datasets
+# REDO THIS BUT WITH vOTUs only found in control and vOTUs only found in burned samples???
 ```{r}
 LNU_contigs <- rownames(lnu_otu)
 LNU_contigs <- data.frame(vOTU = LNU_contigs, Source = "LNU")
@@ -442,39 +517,8 @@ Blodgett_contigs <- Blodgett_contigs %>%
 
 Pigeon_contigs <- rownames(lnu_in_PIGEON_otu)
 Pigeon_contigs <- data.frame(vOTU=Pigeon_contigs, Source = "PIGEON")
-
-prefix_to_database <- function(vOTU) {
-  case_when(
-    str_sub(vOTU, 1, 9) == "almond_CA" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 18) == "RR_tom_rhizo_2021_" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 8) == "BB_2021_" ~ "wetland",
-    str_sub(vOTU, 1, 8) == "RR_2018_" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 20) == "Hopland_2021_Santos_" ~ "grassland",
-    str_sub(vOTU, 1, 13) == "coutinho_2020" ~ "lake",
-    str_sub(vOTU, 1, 8) == "biochar_" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 12) == "Sorensen2021" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 12) == "citrus_rhizo" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 21) == "natural_reserves_2019" ~ "natural_soil",
-    str_sub(vOTU, 1, 3) == "EV_" ~ "varies",
-    str_sub(vOTU, 1, 11) == "RR_6_8_frac" ~ "tropical_rainforest",
-    str_sub(vOTU, 1, 7) == "SPRUCE_" ~ "peat",
-    str_sub(vOTU, 1, 11) == "1_RHIZ_ALM_" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 11) == "2_RHIZ_ALM_" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 11) == "3_RHIZ_ALM_" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 11) == "4_RHIZ_ALM_" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 9) == "1_BU_ALM_" ~ "agricultural_soil",
-    str_sub(vOTU, 1, 9) == "2_BU_ALM_" ~ "agricultural_soil",
-    TRUE ~ "unknown" # Default value if the prefix does not match any known database
-  )
-}
-
 Pigeon_contigs <- Pigeon_contigs %>%
   mutate(Habitat = prefix_to_database(vOTU))
-
-#Pigeon_contigs <- Pigeon_contigs %>%
-  #mutate(ViromeID = str_extract(vOTU, pattern) %>% 
-                      #str_replace(pattern, "\\1"))
-
 Pigeon_contigs$Habitat <- as.factor(Pigeon_contigs$Habitat)
 levels(Pigeon_contigs$Habitat)
 
@@ -525,11 +569,214 @@ ggplot(habitat_count, aes(x = "", y = n, fill = Habitat)) +
   coord_polar("y", start = 0) +
   #labs(title = "Habitat of Contigs Originally Found in Other Datasets") +
   theme_void() +
-  theme(legend.position = "none") +
+  theme(legend.position = "right") +
   scale_fill_manual(values = custom_colors)
   
 ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Habitat_pie.pdf", width = 200, height = 200, units = "mm", dpi = 500)
 ```
+
+# PIGEON DB + BLODGETT
+```{r}
+pigeon2 <- read.delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/220711_pigeon_headers.txt", header = TRUE)
+
+prefix_to_database <- function(vOTU) {
+  case_when(
+    str_sub(vOTU, 1, 9) == "almond_CA" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 18) == "RR_tom_rhizo_2021_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 8) == "BB_2021_" ~ "wetland",
+    str_sub(vOTU, 1, 8) == "RR_2018_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 20) == "Hopland_2021_Santos_" ~ "grassland",
+    str_sub(vOTU, 1, 13) == "coutinho_2020" ~ "lake",
+    str_sub(vOTU, 1, 8) == "biochar_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 12) == "Sorensen2021" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 12) == "citrus_rhizo" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_1_1_" ~ "wetland",
+    str_sub(vOTU, 1, 39) == "natural_reserves_2019_VIRSorter_BB_1_1_" ~ "wetland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_1_2_" ~ "wetland",
+    str_sub(vOTU, 1, 39) == "natural_reserves_2019_VIRSorter_BB_1_2_" ~ "wetland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_2_1_" ~ "wetland",
+    str_sub(vOTU, 1, 39) == "natural_reserves_2019_VIRSorter_BB_2_1_" ~ "wetland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_2_2_" ~ "wetland",
+    str_sub(vOTU, 1, 39) == "natural_reserves_2019_VIRSorter_BB_2_2_" ~ "wetland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_3_1_" ~ "wetland",
+    str_sub(vOTU, 1, 39) == "natural_reserves_2019_VIRSorter_BB_3_1_" ~ "wetland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_4_1_" ~ "grassland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_4_2_" ~ "grassland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_5_1_" ~ "grassland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_5_2_" ~ "grassland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_6_1_" ~ "bluff",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_BB_6_2_" ~ "bluff",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_JP_1_1_" ~ "grassland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_JP_1_2_" ~ "grassland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_JP_2_1_" ~ "grassland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_JP_2_2_" ~ "grassland",
+    str_sub(vOTU, 1, 39) == "natural_reserves_2019_VIRSorter_JP_2_2_" ~ "grassland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_JP_3_1_" ~ "wetland",
+    str_sub(vOTU, 1, 39) == "natural_reserves_2019_VIRSorter_JP_3_1_" ~ "wetland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_JP_3_2_" ~ "wetland",
+    str_sub(vOTU, 1, 39) == "natural_reserves_2019_VIRSorter_JP_3_2_" ~ "wetland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_McL_1_1_" ~ "woodland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_McL_1_2_" ~ "woodland",
+    str_sub(vOTU, 1, 40) == "natural_reserves_2019_VIRSorter_McL_1_2_" ~ "woodland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_McL_3_1_" ~ "grassland",
+    str_sub(vOTU, 1, 40) == "natural_reserves_2019_VIRSorter_McL_3_1_" ~ "grassland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_McL_3_2_" ~ "grassland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_McL_5_1_" ~ "grassland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_McL_5_2_" ~ "grassland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_McL_6_1_" ~ "chaparral",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_McL_6_2_" ~ "chaparral",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_McL_7_1_" ~ "grassland",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_QR_1_1_" ~ "chaparral",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_QR_1_2_" ~ "chaparral",
+    str_sub(vOTU, 1, 39) == "natural_reserves_2019_VIRSorter_QR_1_2_" ~ "chaparral",
+    str_sub(vOTU, 1, 29) == "natural_reserves_2019_QR_2_2_" ~ "woodland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_SCC_1_1_" ~ "grassland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_SCC_1_2_" ~ "grassland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_SCC_2_1_" ~ "woodland",
+    str_sub(vOTU, 1, 30) == "natural_reserves_2019_SCC_2_2_" ~ "woodland",
+    str_sub(vOTU, 1, 3) == "EV_" ~ "varies",
+    str_sub(vOTU, 1, 11) == "RR_6_8_frac" ~ "tropical_rainforest",
+    str_sub(vOTU, 1, 7) == "SPRUCE_" ~ "peat",
+    str_sub(vOTU, 1, 11) == "1_RHIZ_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 11) == "2_RHIZ_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 11) == "3_RHIZ_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 11) == "4_RHIZ_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 12) == "_4_RHIZ_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 9) == "1_BU_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 10) == "_1_BU_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 9) == "2_BU_ALM_" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 4) == "GOV_" ~ "ocean", 
+    str_sub(vOTU, 1, 13) == "coutinho_2020" ~ "lake",
+    str_sub(vOTU, 1, 11) == "myriam_2020" ~ "lake",
+    str_sub(vOTU, 1, 8) == "vik_2020" ~ "ocean",
+    str_sub(vOTU, 1, 9) == "roux2019_" ~ "peat",
+    str_sub(vOTU, 1, 7) == "ICE_SIP" ~ "peat",
+    str_sub(vOTU, 1, 12) == "emerson2018_" ~ "peat",
+    str_sub(vOTU, 1, 15) == "tomato_rhizo_GH" ~ "agricultural_soil",
+    str_sub(vOTU, 1, 4) == "GRE_" ~ "tropical_rainforest",
+    str_sub(vOTU, 1, 10) == "trubl2018_" ~ "peat",
+    str_sub(vOTU, 1, 10) == "trubl2019_" ~ "peat",
+    str_sub(vOTU, 1, 11) == "borton2018_" ~ "wetland",
+    str_sub(vOTU, 1, 7) == "li_2021" ~ "ocean",
+    TRUE ~ "unknown" # Default value if the prefix does not match any known database
+  )
+}
+
+pigeon2 <- pigeon2 %>%
+  mutate(Habitat = prefix_to_database(vOTU))
+
+# earth's virome
+ev <- read.delim("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/origin_EV.txt", header = TRUE)
+ev <- ev %>%
+  rename(Habitat = Ecosystem) %>%
+  select(-origin)
+ev$org_header <- as.character(ev$org_header)
+pigeon2_ev <- subset(pigeon2, Habitat=="varies")
+pigeon2_ev <- pigeon2_ev %>%
+  # Extract the org_header part from vOTU
+  mutate(org_header = sub("EV_(\\d+).*", "\\1", vOTU)) %>%
+  # Left join with the second dataframe on the org_header
+  left_join(ev, by = "org_header") %>%
+  # Replace the old Habitat with the new Habitat from the second dataframe
+  mutate(Habitat = Habitat.y) %>%
+  # Select only the necessary columns
+  select(vOTU, Habitat)
+
+pigeon2 <- pigeon2 %>%
+  left_join(pigeon2_ev, by = "vOTU", suffix = c(".all", ".subset")) %>%
+  mutate(Habitat = ifelse(is.na(Habitat.subset), Habitat.all, Habitat.subset)) %>%
+  select(vOTU, Habitat)
+
+blodgett <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/blodgett_contigs_habitat.RDS")
+pigeon3 <- rbind(pigeon2, blodgett)
+
+pigeon3$Habitat <- as.factor(pigeon3$Habitat)
+levels(pigeon3$Habitat)
+pigeon3 <- pigeon3 %>%
+  mutate(NewHabitat = case_when(
+    Habitat == "agricultural_soil" ~ "soil",
+    Habitat == "Ascidians" ~ "host-associated", 
+    Habitat == "Bacteria" ~ "host-associated", 
+    Habitat == "bluff" ~ "soil",
+    Habitat == "chaparral" ~ "soil", 
+    Habitat == "Composting" ~ "engineered", 
+    Habitat == "Continuous culture" ~ "host-associated", 
+    Habitat == "Dairy products" ~ "host-associated", 
+    Habitat == "Deep subsurface" ~ "terrestrial (non-soil)",
+    Habitat == "Defined media" ~ "engineered",
+    Habitat == "Digestive system" ~ "host-associated",
+    Habitat == "Forest" ~ "soil",
+    Habitat == "Forest_Burned" ~ "soil",
+    Habitat == "Forest_Disturbed" ~ "soil",
+    Habitat == "Forest_Heated" ~ "soil",
+    Habitat == "Forest_Heated30ºC" ~ "soil",
+    Habitat == "Forest_Heated60ºC" ~ "soil",
+    Habitat == "Forest_Heated90ºC" ~ "soil",
+    Habitat == "Forest_Undisturbed" ~ "soil",
+    Habitat == "Freshwater" ~ "freshwater",
+    Habitat == "grassland" ~ "soil",
+    Habitat == "Hydrocarbon" ~ "engineered",
+    Habitat == "Industrial wastewater" ~ "water (other)",
+    Habitat == "Integument" ~ "host-associated",
+    Habitat == "Intracellular endosymbionts" ~ "host-associated",
+    Habitat == "lake" ~ "freshwater",
+    Habitat == "Marine" ~ "ocean",
+    Habitat == "Microbial enhanced oil recovery" ~ "engineered",
+    Habitat == "Microbial solubilization of coal" ~ "engineered",
+    Habitat == "Mixed alcohol bioreactor" ~ "engineered",
+    Habitat == "Non-marine Saline and Alkaline" ~ "water (other)",
+    Habitat == "Nutrient removal" ~ "engineered",
+    Habitat == "ocean" ~ "ocean",
+    Habitat == "Oil reservoir" ~ "terrestrial (non-soil)",
+    Habitat == "Outdoor Air" ~ "air",
+    Habitat == "peat" ~ "soil",
+    Habitat == "Phylloplane" ~ "plant-associated",
+    Habitat == "Reproductive system" ~ "host-associated",
+    Habitat == "Respiratory system" ~ "host-associated",
+    Habitat == "Rhizoplane" ~ "plant-associated",
+    Habitat == "Skin" ~ "host-associated",
+    Habitat == "Soil" ~ "soil",
+    Habitat == "Symbiotic fungal gardens and galleries" ~ "host-associated",
+    Habitat == "Terephthalate" ~ "engineered",
+    Habitat == "Tetrachloroethylene and derivatives" ~ "engineered",
+    Habitat == "Thermal springs" ~ "water (other)",
+    Habitat == "tropical_rainforest" ~ "soil",
+    Habitat == "Unclassified" ~ "unclassified",
+    Habitat == "unknown" ~ "unclassified",
+    Habitat == "varies" ~ "unclassified",
+    Habitat == "wetland" ~ "soil",
+    Habitat == "woodland" ~ "soil"
+  ))
+
+habitat_count <- pigeon3 %>%
+  count(NewHabitat)
+
+habitat_count <- habitat_count %>%
+  filter(!(NewHabitat %in% c("chaparral", "woodland")))
+
+
+ggplot(habitat_count, aes(x = "", y = n, fill = NewHabitat)) +
+  geom_col(color = "black", linewidth = 0.5) +
+  #geom_text(aes(label = paste(Habitat, "-", n)), 
+            #position = position_stack(vjust = 0.5)) +
+  coord_polar("y", start = 0) +
+  #labs(title = "Habitat of Contigs Originally Found in Other Datasets") +
+  theme_void() +
+  theme(legend.position = "right") #+
+  #scale_fill_manual(values = custom_colors)
+
+ggplot(habitat_count, aes(x = "", y = n, fill = NewHabitat)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_flip() +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      panel.grid = element_blank(),
+      plot.title = element_text(hjust = 0.5))
+```
+
+
+
 # identifying how many vOTUs clustered with vOTUs from original dataset
 ```{r}
 # these are all the contigs that were found in other datasets
@@ -630,6 +877,7 @@ saveRDS(iphop.phylum, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R
 iphop.phylum <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/iphop_phylum.RDS")
 ```
 # host prediction - whole dataset (only the LNU clustered with itself, not with PIGEON or blodgett contigs)
+## I WILL NEED TO REDO THIS ONCE I GET THE FILES FINISHED IN FARM!
 ```{r}
 # name row.names of otu.rel
 otu.rel.otu <- otu.rel %>%
@@ -643,7 +891,7 @@ otu.rel.phylum <- otu.rel.phylum %>% select(-vOTU)
 otu.phylum.long <- pivot_longer(otu.rel.phylum, cols=2:47, names_to = "ViromeID", values_to = "RelAbd")
 saveRDS(otu.phylum.long, "C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/otu.phylum.long.rds")
 otu.phylum.stack <- group_by(otu.phylum.long, HostPhylum, ViromeID) %>%
-  summarize(RelAbd=sum(RelAbd))
+  dplyr::summarize(RelAbd=sum(RelAbd))
 otu.phylum.stack <- otu.phylum.stack %>%
   group_by(HostPhylum) %>%
   mutate(NewHostPhylum = ifelse(all(RelAbd < 0.001), 'Other', HostPhylum)) %>%
@@ -663,7 +911,7 @@ hostphylum <- ggplot(otu.phylum.map, aes(x=ViromeID, y=RelAbd, fill=NewHostPhylu
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   facet_wrap(~ Treatment)
-hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/allhostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/virome/allhostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
 ```
 # host prediction - Only Chaparral (only the LNU clustered with itself, not with PIGEON or blodgett contigs)
 ```{r}
@@ -678,7 +926,7 @@ ch.otu.rel.phylum <- ch.otu.rel.phylum %>% mutate(HostPhylum = ifelse(is.na(Host
 ch.otu.rel.phylum <- ch.otu.rel.phylum %>% select(-vOTU) 
 ch.otu.phylum.long <- pivot_longer(ch.otu.rel.phylum, cols=2:24, names_to = "ViromeID", values_to = "RelAbd")
 ch.otu.phylum.stack <- group_by(ch.otu.phylum.long, HostPhylum, ViromeID) %>%
-  summarize(RelAbd=sum(RelAbd))
+  dplyr::summarize(RelAbd=sum(RelAbd))
 ch.otu.phylum.stack <- ch.otu.phylum.stack %>%
   group_by(HostPhylum) %>%
   mutate(NewHostPhylum = ifelse(all(RelAbd < 0.001), 'Other', HostPhylum)) %>%
@@ -706,8 +954,97 @@ hostphylum <- ggplot(ch.otu.phylum.map, aes(x=Time_ID, y=RelAbd, fill=NewHostPhy
   geom_vline(xintercept = c(4.5, 7.5, 19.5), linetype = "solid", color = "black", linewidth = 0.5)+
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
-hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/chaparral_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/virome/chaparral_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
 ```
+# Host Prediction - Chaparral, Burned
+```{r}
+# name row.names of otu.rel
+f.ch.otu.rel.otu <- f.ch.otu.rel %>%
+  rownames_to_column(var = "vOTU")
+f.ch.otu.rel.phylum <- merge(iphop.phylum, f.ch.otu.rel.otu, by = "vOTU", all.y = TRUE)
+
+# replace NA Host Phylum with "unknown"
+f.ch.otu.rel.phylum <- f.ch.otu.rel.phylum %>% mutate(HostPhylum = ifelse(is.na(HostPhylum), "Unknown", HostPhylum))
+# remove OTU column
+f.ch.otu.rel.phylum <- f.ch.otu.rel.phylum %>% select(-vOTU) 
+f.ch.otu.phylum.long <- pivot_longer(f.ch.otu.rel.phylum, cols=2:16, names_to = "ViromeID", values_to = "RelAbd")
+f.ch.otu.phylum.stack <- group_by(f.ch.otu.phylum.long, HostPhylum, ViromeID) %>%
+  dplyr::summarize(RelAbd=sum(RelAbd))
+f.ch.otu.phylum.stack <- f.ch.otu.phylum.stack %>%
+  group_by(HostPhylum) %>%
+  mutate(NewHostPhylum = ifelse(all(RelAbd < 0.001), 'Other', HostPhylum)) %>%
+  ungroup()
+
+iphop_wildfire_data <- wildfire_data %>%
+  mutate(Time_ID = paste(TimePoint, "-", SubPlot)) %>%
+  arrange(Time_ID)
+
+# Prep data frame for plotting
+f.ch.otu.phylum.map <- merge(f.ch.otu.phylum.stack, iphop_wildfire_data, by="ViromeID")
+f.ch.otu.phylum.map <- f.ch.otu.phylum.map[f.ch.otu.phylum.map$NewHostPhylum != "Unknown", ]
+
+unique(f.ch.otu.phylum.map$NewHostPhylum)
+
+# Plot
+hostphylum <- ggplot(f.ch.otu.phylum.map, aes(x=Time_ID, y=RelAbd, fill=NewHostPhylum))+
+    labs(x="Sample ID", 
+       y ="Relative Abundance",
+       title = "Chaparral - LNU vOTU Host Prediction by Sample")+
+  geom_bar(stat="identity")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(3.5, 11.5), linetype = "solid", color = "black", linewidth = 0.5)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/virome/chaparral_burned_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+
+# Host Prediction - Chaparral, Control vs. Burn (T3)
+```{r}
+# name row.names of otu.rel
+T3.ch.otu.rel.otu <- T3.ch.otu.rel %>%
+  rownames_to_column(var = "vOTU")
+T3.ch.otu.rel.phylum <- merge(iphop.phylum, T3.ch.otu.rel.otu, by = "vOTU", all.y = TRUE)
+
+# replace NA Host Phylum with "unknown"
+T3.ch.otu.rel.phylum <- T3.ch.otu.rel.phylum %>% mutate(HostPhylum = ifelse(is.na(HostPhylum), "Unknown", HostPhylum))
+# remove OTU column
+T3.ch.otu.rel.phylum <- T3.ch.otu.rel.phylum %>% select(-vOTU) 
+T3.ch.otu.phylum.long <- pivot_longer(T3.ch.otu.rel.phylum, cols=2:13, names_to = "ViromeID", values_to = "RelAbd")
+T3.ch.otu.phylum.stack <- group_by(T3.ch.otu.phylum.long, HostPhylum, ViromeID) %>%
+  dplyr::summarize(RelAbd=sum(RelAbd))
+T3.ch.otu.phylum.stack <- T3.ch.otu.phylum.stack %>%
+  group_by(HostPhylum) %>%
+  mutate(NewHostPhylum = ifelse(all(RelAbd < 0.001), 'Other', HostPhylum)) %>%
+  ungroup()
+
+iphop_wildfire_data <- wildfire_data %>%
+  mutate(Time_ID = paste(TimePoint, "-", SubPlot)) %>%
+  arrange(Time_ID)
+iphop_wildfire_data <- iphop_wildfire_data %>%
+  mutate(Treatment_ID = paste(Treatment, "-", SubPlot)) %>%
+  arrange(Treatment_ID)
+
+# Prep data frame for plotting
+T3.ch.otu.phylum.map <- merge(T3.ch.otu.phylum.stack, iphop_wildfire_data, by="ViromeID")
+T3.ch.otu.phylum.map <- T3.ch.otu.phylum.map[T3.ch.otu.phylum.map$NewHostPhylum != "Unknown", ]
+
+unique(T3.ch.otu.phylum.map$NewHostPhylum)
+
+# Plot
+hostphylum <- ggplot(T3.ch.otu.phylum.map, aes(x=Treatment_ID, y=RelAbd, fill=NewHostPhylum))+
+    labs(x="Sample ID", 
+       y ="Relative Abundance",
+       title = "T3, Chaparral - LNU vOTU Host Prediction by Sample")+
+  annotate('rect', xmin = -Inf, xmax = 4.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
+  geom_bar(stat="identity")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  scale_x_discrete(labels = T3.ch.map$TimePoint_ID) +
+  geom_vline(xintercept = c(4.5), linetype = "solid", color = "black", linewidth = 0.5)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/virome/chaparral_T3_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+
 # Host Prediction Stats - chaparral
 ```{r}
 ch.host.stats <- ch.otu.phylum.map
@@ -777,7 +1114,7 @@ hostphylum <- ggplot(wo.otu.phylum.map, aes(x=Time_ID, y=RelAbd, fill=NewHostPhy
   geom_vline(xintercept = c(3.5, 7.5, 19.5), linetype = "solid", color = "black", size = 0.5)+
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
-hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/woodland_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/virome/woodland_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
 ```
 
 ```{r}
@@ -811,3 +1148,90 @@ kruskal.test(RelAbd ~ Treatment, nitro_wo)
 kruskal.test(RelAbd ~ Treatment, proteo_wo)
 ```
 
+
+# Host Prediction - Woodland, Burned
+```{r}
+# name row.names of otu.rel
+f.wo.otu.rel.otu <- f.wo.otu.rel %>%
+  rownames_to_column(var = "vOTU")
+f.wo.otu.rel.phylum <- merge(iphop.phylum, f.wo.otu.rel.otu, by = "vOTU", all.y = TRUE)
+
+# replace NA Host Phylum with "unknown"
+f.wo.otu.rel.phylum <- f.wo.otu.rel.phylum %>% mutate(HostPhylum = ifelse(is.na(HostPhylum), "Unknown", HostPhylum))
+# remove OTU column
+f.wo.otu.rel.phylum <- f.wo.otu.rel.phylum %>% select(-vOTU) 
+f.wo.otu.phylum.long <- pivot_longer(f.wo.otu.rel.phylum, cols=2:17, names_to = "ViromeID", values_to = "RelAbd")
+f.wo.otu.phylum.stack <- group_by(f.wo.otu.phylum.long, HostPhylum, ViromeID) %>%
+  dplyr::summarize(RelAbd=sum(RelAbd))
+f.wo.otu.phylum.stack <- f.wo.otu.phylum.stack %>%
+  group_by(HostPhylum) %>%
+  mutate(NewHostPhylum = ifelse(all(RelAbd < 0.001), 'Other', HostPhylum)) %>%
+  ungroup()
+
+iphop_wildfire_data <- wildfire_data %>%
+  mutate(Time_ID = paste(TimePoint, "-", SubPlot)) %>%
+  arrange(Time_ID)
+
+# Prep data frame for plotting
+f.wo.otu.phylum.map <- merge(f.wo.otu.phylum.stack, iphop_wildfire_data, by="ViromeID")
+f.wo.otu.phylum.map <- f.wo.otu.phylum.map[f.wo.otu.phylum.map$NewHostPhylum != "Unknown", ]
+
+unique(f.wo.otu.phylum.map$NewHostPhylum)
+
+# Plot
+hostphylum <- ggplot(f.wo.otu.phylum.map, aes(x=Time_ID, y=RelAbd, fill=NewHostPhylum))+
+    labs(x="Sample ID", 
+       y ="Relative Abundance",
+       title = "Woodland - LNU vOTU Host Prediction by Sample")+
+  geom_bar(stat="identity")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(4.5, 12.5), linetype = "solid", color = "black", linewidth = 0.5)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/virome/woodland_burned_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+# Host Prediction - Woodland, Control vs. Burn (T3)
+```{r}
+# name row.names of otu.rel
+T3.wo.otu.rel.otu <- T3.wo.otu.rel %>%
+  rownames_to_column(var = "vOTU")
+T3.wo.otu.rel.phylum <- merge(iphop.phylum, T3.wo.otu.rel.otu, by = "vOTU", all.y = TRUE)
+
+# replace NA Host Phylum with "unknown"
+T3.wo.otu.rel.phylum <- T3.wo.otu.rel.phylum %>% mutate(HostPhylum = ifelse(is.na(HostPhylum), "Unknown", HostPhylum))
+# remove OTU column
+T3.wo.otu.rel.phylum <- T3.wo.otu.rel.phylum %>% select(-vOTU) 
+T3.wo.otu.phylum.long <- pivot_longer(T3.wo.otu.rel.phylum, cols=2:13, names_to = "ViromeID", values_to = "RelAbd")
+T3.wo.otu.phylum.stack <- group_by(T3.wo.otu.phylum.long, HostPhylum, ViromeID) %>%
+  dplyr::summarize(RelAbd=sum(RelAbd))
+T3.wo.otu.phylum.stack <- T3.wo.otu.phylum.stack %>%
+  group_by(HostPhylum) %>%
+  mutate(NewHostPhylum = ifelse(all(RelAbd < 0.001), 'Other', HostPhylum)) %>%
+  ungroup()
+
+iphop_wildfire_data <- wildfire_data %>%
+  mutate(Time_ID = paste(TimePoint, "-", SubPlot)) %>%
+  arrange(Time_ID)
+iphop_wildfire_data <- iphop_wildfire_data %>%
+  mutate(Treatment_ID = paste(Treatment, "-", SubPlot)) %>%
+  arrange(Treatment_ID)
+
+# Prep data frame for plotting
+T3.wo.otu.phylum.map <- merge(T3.wo.otu.phylum.stack, iphop_wildfire_data, by="ViromeID")
+T3.wo.otu.phylum.map <- T3.wo.otu.phylum.map[T3.wo.otu.phylum.map$NewHostPhylum != "Unknown", ]
+
+unique(T3.wo.otu.phylum.map$NewHostPhylum)
+
+# Plot
+hostphylum <- ggplot(T3.wo.otu.phylum.map, aes(x=Treatment_ID, y=RelAbd, fill=NewHostPhylum))+
+    labs(x="Sample ID", 
+       y ="Relative Abundance",
+       title = "T3, Woodland - LNU vOTU Host Prediction by Sample")+
+  annotate('rect', xmin = -Inf, xmax = 4.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
+  geom_bar(stat="identity")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(4.5), linetype = "solid", color = "black", linewidth = 0.5)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/virome/woodland_T3_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
