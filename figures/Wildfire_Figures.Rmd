@@ -3,6 +3,77 @@ title: "Wildfire_Figures"
 output: html_document
 date: "2024-08-27"
 ---
+# GENERAL FUNCTIONS
+```{r}
+# CUSTOM COLOR PALETTE & ORDERS
+  Habitat_Color <- c("goldenrod1", "#39A96B")
+  Habitat_Order <- c('Chaparral', 'Woodland')
+  Treatment_20_Color <- c("royalblue", "darkorange")
+  Treatment_20_Order <- c('Control', 'Burn')
+  Treatment_Color <- c("skyblue", "royalblue", "darkorange")
+  Treatment_Order <- c('Before_Burn', 'AfterBurn_Control', 'AfterBurn_Wildfire')
+  pf_treatment_color <- c("royalblue", "darkorange")
+  pf_treatment_order <- c('AfterBurn_Control', 'AfterBurn_Wildfire')
+  collapsed_phylum_colors <- c("Acidobacteriota" = "#7526C3", "Actinobacteriota" = "#75d644", "Altarchaeota" = "#F9D3D7","Bacteroidota" = "#FAE500", "Bdellovibrionota" = "#0026F9", "Chloroflexota" = "#2665A1", "Crenarchaeota" = "#000000", "Cyanobacteria" = "#1CFEDA", "Desulfobacterota" = "#6C328B", "Firmicutes" = "#2ead57", "Gemmatimonadota" = "#84530D", "Halobacteriota" = "#B6EBEF", "Methanobacteriota" = "#CBC279", "Myxococcota" = "#FF942E", "Nitrospirota" = "#909AFE", "Patescibacteria" = "#22CBFD", "Planctomycetota" =  "#fa4668", "Proteobacteria" = "#D78EFC", "Verrucomicrobiota" = "#FE9B95", "mixed" = "purple", "Other" = "darkgray")
+  collapsed_phyla_order <- c("Acidobacteriota", "Actinobacteriota", "Altarchaeota", "Bacteroidota", "Bdellovibrionota", "Chloroflexota", "Crenarchaeota", "Cyanobacteria", "Desulfobacterota", "Firmicutes", "Gemmatimonadota", "Halobacteriota", "Methanobacteriota", "Myxococcota", "Nitrospirota", "Patescibacteria", "Planctomycetota", "Proteobacteria", "Verrucomicrobiota", "mixed", "Other")
+
+# Z-TRANSFORMED MATRIX FOR ENVIRONMENTAL DATA
+nutmtx <- function(chem) {
+  nut.mtx <- chem %>%
+    gather(key = "Variable", value = "Value", -ViromeID) %>%
+    group_by(Variable) %>%
+    mutate(zValue = (Value - mean(Value))/sd(Value)) %>% 
+    select(ViromeID, Variable, zValue) %>% 
+    spread(key = Variable, value = zValue) %>% 
+    as.data.frame()
+row.names(nut.mtx) <- nut.mtx$ViromeID
+return(nut.mtx)}
+
+# REMOVE SINGLETONS (only appears in one sample)
+rmv_sngl <- function(data) {
+  data <- data[rowSums(data>0) >1,]
+  data <- data[, colSums(data)>0]
+return(data)}
+
+# RELATIVIZE
+relativize <- function(data) {
+  data.rel=decostand(data, method = "total", MARGIN = 2)
+return(data.rel)}
+
+# CALCULATE DISTANCE MATRIX
+distance <- function(data.rel) {
+  data.dist=vegdist(t(data.rel), method = "bray")
+return(data.dist)}
+
+# CALCULATE PCOA POINTS
+pcoa <- function(data.dist) {
+  data.pcoa=cmdscale(data.dist, eig = TRUE)
+return(data.pcoa)}
+
+# CREATE DATA FRAME WITH PCOA POINTS
+pcoa.points <- function(data.pcoa) {
+  data.pcoa.points=data.frame(data.pcoa$points)
+  colnames(data.pcoa.points)=c("pcoa1", "pcoa2")
+return(data.pcoa.points)}
+
+# JOIN METADATA AND PCOA DATA (vOTUs)
+pcoa.map <- function(data.pcoa.points,map) {
+  data.pcoa.points$ViromeID <- rownames(data.pcoa.points)
+  data.map=left_join(data.pcoa.points,map,by="ViromeID")
+return(data.map)}
+
+# JOIN METADATA AND PCOA DATA (ASVs)
+pcoa.map.asv <- function(data.pcoa.points,map) {
+  data.pcoa.points$ASV_ID <- rownames(data.pcoa.points)
+  data.map=left_join(data.pcoa.points,map,by="ASV_ID")
+return(data.map)}
+
+# CALCULATE VARIANCE EXPLAINED
+variance <- function(data.pcoa, x) {
+  data.pcoa$eig[x]/sum(data.pcoa$eig)}
+```
+
+
 # FIGURE 1
 # Figure 1A - Map
 # Load input data
