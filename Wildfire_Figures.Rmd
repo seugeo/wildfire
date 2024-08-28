@@ -1,0 +1,1456 @@
+---
+title: "Wildfire_Figures"
+output: html_document
+date: "2024-08-27"
+---
+# FIGURE 1
+# Figure 1A - Map
+# Load input data
+```{r}
+wildfire_sample_locations <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/wildfire_gps_data.RDS")
+sample_sf <- st_as_sf(wildfire_sample_locations, coords = c("longitude", "latitude"), crs = 4326)
+
+quail_locations <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/quail_locations.RDS")
+add_rows <- data.frame(Plot = c("x", "y"), longitude = c(-122.1486449, -122.148692), latitude = c(38.48450498,38.480886))
+quail_locations <- rbind(quail_locations, add_rows)
+quail_sf <- st_as_sf(quail_locations, coords = c("longitude", "latitude"), crs = 4326)
+
+mcl_locations <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/mcl_locations.RDS")
+mcl_sf <- st_as_sf(mcl_locations, coords = c("longitude", "latitude"), crs = 4326)
+```
+# Load packages
+```{r}
+library(sf)
+library(ggspatial)
+library(tidyverse)
+```
+# Create maps
+```{r}
+ggplot() +
+  annotation_map_tile(type = "osm", zoom = 13) +
+  geom_sf(data = sample_sf, aes(geometry = geometry), color = "black", size = 1.25) +
+  annotation_scale(location = "bl", width_hint = 0.5) +  # Adding a scale bar
+  annotation_north_arrow(location = "tl", which_north = "true", 
+                         pad_x = unit(1.7, "in"), pad_y = unit(0.05, "in"),
+                         style = north_arrow_fancy_orienteering) +  # Adding a north arrow
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank()
+  ) +
+  labs(title = "Sample Locations",
+       subtitle = "Study area with sample points")
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Maps/full_map.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+
+# Quail Ridge Subset
+ggplot() +
+  annotation_map_tile(type = "osm", zoom = 50) +
+  geom_sf(data = quail_sf, aes(geometry = geometry), color = "white", size = 3) +
+  annotation_scale(location = "br", width_hint = 0.5) +  # Adding a scale bar
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank())
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Maps/quail_map.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+
+# McLaughlin Subset
+ggplot() +
+  annotation_map_tile(type = "osm", zoom = 15) +
+  geom_sf(data = mcl_sf, aes(geometry = geometry), color = "white", size = 3) +
+  annotation_scale(location = "bl", width_hint = 0.5) +  # Adding a scale bar
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks.x = element_blank(),
+    axis.ticks.y = element_blank())
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Maps/mclaughlin_map.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+```
+
+# Figure 1B - DNA Yields
+# Load input data
+```{r}
+wildfire_DNA <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_DNA.RDS")
+wildfire_DNA <- wildfire_DNA %>%
+  mutate(Time_Days = paste(TimePoint, "/", DaysAfterFire))
+# replacing NA with "0" - bottom of threshold
+DNA_NA_0 <- wildfire_DNA
+# replacing NA with "0.49" - top of threshold
+DNA_NA_0.49 <- wildfire_DNA
+DNA_NA_0.49[is.na(DNA_NA_0.49)] <- 0.49
+```
+# Load packages
+```{r}
+library(tidyverse)
+```
+# Create box plots (only for DNA yield replaced with "0")
+```{r}
+DNA_NA_0$DNA_g[is.na(DNA_NA_0$DNA_g)] <- 0
+ggplot(DNA_NA_0, aes(x = Time_Days, y = DNA_g, fill = Treatment)) +
+  geom_boxplot(width = 0.5, outlier.shape=NA, position = position_dodge(width = 0.75)) +
+  geom_jitter(aes(color = Habitat), position = position_jitter(width = 0.05), size = 1) +
+  xlab("Timepoint / Days Since Fire") +
+  ylab("DNA yield (ng/g soil)") +
+  theme_bw() +
+  theme(axis.title = element_text(size = 14)) +
+  theme(legend.position = "bottom", legend.text = element_text(size=14), legend.title = element_text(size=14)) +
+  theme(axis.text = element_text(size = 14)) +
+  scale_color_manual(values = Habitat_Color) +
+  scale_fill_manual(values = Treatment_20_Color, limits = Treatment_20_Order) +
+  facet_wrap(~ Treatment)
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/BoxPlot/LNU_DNA_NA_0.pdf", width = 100, height = 80, units = "mm", dpi = 500)
+```
+# Statistics
+```{r}
+# stats on DNA yield 
+# this is where the NA values are replaced with a 0
+DNA_NA_0.stats <- DNA_NA_0
+DNA_NA_0_c_ctrl <- DNA_NA_0.stats %>%
+  filter(Habitat == "Chaparral"&Treatment == "Control")
+kruskal.test(DNA_g ~ TimePoint, DNA_NA_0_c_ctrl)
+DNA_NA_0_c_burn <- DNA_NA_0.stats %>%
+  filter(Habitat == "Chaparral"&Treatment == "Burn")
+kruskal.test(DNA_g ~ TimePoint, DNA_NA_0_c_burn)
+DNA_NA_0_w_ctrl <- DNA_NA_0.stats %>%
+  filter(Habitat == "Woodland"&Treatment == "Control")
+kruskal.test(DNA_g ~ TimePoint, DNA_NA_0_w_ctrl)
+DNA_NA_0_w_burn <- DNA_NA_0.stats %>%
+  filter(Habitat == "Woodland"&Treatment == "Burn")
+kruskal.test(DNA_g ~ TimePoint, DNA_NA_0_w_burn)
+DNA_NA_0_T3 <- DNA_NA_0.stats %>%
+  filter(TimePoint == "T3")
+kruskal.test(DNA_g ~ Treatment, DNA_NA_0_T3)
+DNA_NA_0_T4 <- DNA_NA_0.stats %>%
+  filter(TimePoint == "T4")
+kruskal.test(DNA_g ~ Treatment, DNA_NA_0_T4)
+DNA_NA_0_T5 <- DNA_NA_0.stats %>%
+  filter(TimePoint == "T5")
+kruskal.test(DNA_g ~ Treatment, DNA_NA_0_T5)
+
+# stats on DNA yield 
+# this is where the NA values are replaced with a 0.49
+DNA_NA_0.49.stats <- DNA_NA_0.49
+DNA_NA_0.49_c_ctrl <- DNA_NA_0.49.stats %>%
+  filter(Habitat == "Chaparral"&Treatment == "Control")
+kruskal.test(DNA_g ~ TimePoint, DNA_NA_0.49_c_ctrl)
+DNA_NA_0.49_c_burn <- DNA_NA_0.49.stats %>%
+  filter(Habitat == "Chaparral"&Treatment == "Burn")
+kruskal.test(DNA_g ~ TimePoint, DNA_NA_0.49_c_burn)
+DNA_NA_0.49_w_ctrl <- DNA_NA_0.49.stats %>%
+  filter(Habitat == "Woodland"&Treatment == "Control")
+kruskal.test(DNA_g ~ TimePoint, DNA_NA_0.49_w_ctrl)
+DNA_NA_0.49_w_burn <- DNA_NA_0.49.stats %>%
+  filter(Habitat == "Woodland"&Treatment == "Burn")
+kruskal.test(DNA_g ~ TimePoint, DNA_NA_0.49_w_burn)
+```
+
+
+
+# Figure 1C - PCA of Environmental Data
+# Load input data
+```{r}
+chem_wildfire <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/chem_wildfire.RDS")
+```
+# Load packages
+```{r}
+library(vegan)
+library(tidyverse)
+```
+
+# Z-transformed Nutrient Matrix (T0-T5)
+```{r}
+# Prep dataframe
+w.chem.ID=chem_wildfire%>%
+  select(-OrganicNRelease, -OrganicPRelease, -SoilHealthCalculation, -OrganicNInorganicN, -WDRFBuffer, -OrganicNReserve, -OrganicPReserve, -SampleID, -Date, -TotalDNAID, -Timepoint, -Location, -Habitat, -Plot, -SubPlot, -Treatment,  -DaysAfterFire)
+
+# Remove variables with no variation, z-transform each variable, and format it as a matrix
+w.nut.mtx <- nutmtx(w.chem.ID)
+w.chem.map <- chem_wildfire[, -c(11:46)]
+w.chem.map = left_join(w.chem.map,w.nut.mtx,by="ViromeID")
+w.nut.mtx <- w.nut.mtx[,-1]
+w.nut.mtx <- as.matrix(w.nut.mtx)
+```
+# PCA of Z-Transformed Chemical Properties
+```{r}
+pca.w.nut.mtx <- as.data.frame(w.nut.mtx) %>%
+  select(Moisture, SoilpH, OrganicMatter, AvailableP, Calcium, Magnesium, Potassium, Sodium)
+w.nut.dist <- as.matrix(dist(pca.w.nut.mtx, method = "euclidean"))
+pca_fit <- princomp(pca.w.nut.mtx, cor = TRUE)
+scores <- as.data.frame(pca_fit$scores)
+scores$Comp.1 <- -scores$Comp.1
+pca_variance <- pca_fit$sdev^2 / sum(pca_fit$sdev^2)
+w_pca_scores <- scores %>%
+  select(Comp.1, Comp.2)
+w_pca_scores <- rownames_to_column(w_pca_scores, var = "SampleID")
+w_pca_map <- chem_wildfire %>%
+  select(Location, Habitat, Treatment, Plot, SubPlot, Date, Timepoint, DaysAfterFire, ViromeID)
+w_pca_map <- w_pca_map %>%
+   rename(SampleID = ViromeID)
+w_pca_map=left_join(w_pca_map,w_pca_scores,by="SampleID")
+loadings <- as.data.frame(pca_fit$loadings[, 1:2])
+loadings$Comp.1 <- -loadings$Comp.1
+w_pca_map$Habitat <- as.factor(w_pca_map$Habitat)
+print(names(w_pca_map))
+print(names(loadings))
+print(head(w_pca_map))
+print(head(loadings))
+
+w_pca_map <- w_pca_map %>%
+  mutate(BurnStatus = case_when(
+    Treatment == "AfterBurn_Wildfire" ~ "Burned", 
+    Treatment == "Before_Burn" ~ "Unburned",
+    Treatment == "AfterBurn_Control" ~ "Unburned"))
+
+pca_plot <- ggplot(w_pca_map, aes(x = Comp.1, y = Comp.2, color = Treatment)) +
+  geom_point(size = 3) + # Plot individual samples
+  scale_color_manual(values = Treatment_Color, limits = Treatment_Order) +
+  geom_segment(data = loadings,
+              aes(x = 0, y = 0, xend = Comp.1 * 6, yend = Comp.2 * 6),  # Scale the vectors for better visibility
+              arrow = arrow(length = unit(0.2, "cm")),
+              color = "black", linewidth = 0.5, alpha = 0.25) +
+  geom_text(data = loadings, 
+            aes(x = Comp.1 * 6, y = Comp.2 * 6, label = rownames(loadings)), 
+            vjust = 1.5, color = "black") +
+  labs(title = "PCA Plot with Variable Vectors",
+       x = "PCA1, 34.14% Variance Explained",
+       y = "PCA2, 18.83% Variance Explained") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(size = 18),
+    axis.title.x = element_text(size = 18),
+    axis.title.y = element_text(size = 18),
+    axis.text.x = element_text(size = 18),
+    axis.text.y = element_text(size = 18),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 18), 
+    legend.position = "bottom")
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCA/LNU_PCA.pdf", width = 180, height = 180, units = "mm", dpi = 500)
+```
+# Statistics
+```{r}
+adonis2(w.nut.dist ~ w_pca_map$'BurnStatus')
+adonis2(w.nut.dist ~ w_pca_map$'Habitat')
+```
+
+
+
+# FIGURE 2
+# Figure 2A - Virome PCoA
+# Load input data
+```{r}
+# read mapping after clustering to everything (vOTUs originally found in PIGEON, vOTUs originally found in blodgett, and the LNU dataset)
+lnu_Pb_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_Pb_otu.RDS")
+# metadata
+wildfire_data <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
+# quality control
+identical(colnames(lnu_Pb_otu), wildfire_data$ViromeID)
+```
+# Load packages
+```{r}
+library(vegan)
+library(dplyr)
+library(tidyverse)
+```
+# Make PCoA Plot
+```{r}
+# PCoA of Entire Dataset
+dfname <- "lnu_Pb_otu"
+df <- get(dfname)
+otu <- rmv_sngl(df)
+otu.rel <- relativize(otu)
+colSums(otu.rel)
+
+otu.dist <- distance(otu.rel)
+otu.pcoa <- pcoa(otu.dist)
+otu.pcoa.points <- pcoa.points(otu.pcoa)
+otu.map <- pcoa.map(otu.pcoa.points, wildfire_data)
+variance(otu.pcoa, 1)
+variance(otu.pcoa, 2)
+
+# Treatment + Habitat
+ggplot(otu.map, aes(x=pcoa1, y=pcoa2, color=Treatment, shape = Habitat))+
+  geom_point(size = 3) +
+  labs(x = "PCo1 (10.24% Variance Explained)", 
+       y = "PCo2 (6.61% Variance Explained)",
+       title = "All LNU Viromes")+
+  theme(axis.title = element_text(size = 18)) +
+  theme(legend.text = element_text(size = 18), legend.position = "right") +
+  theme(legend.title = element_text(size = 18)) +
+  theme(axis.text = element_text(size = 18)) +
+  scale_color_manual(values=Treatment_Color, limits=Treatment_Order) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/viromes/lnu_Pb_otu_treatment_habitat.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+```
+# Statistics
+```{r}
+# run PERMANOVAs
+adonis2(otu.dist ~ otu.map$'Treatment' + otu.map$'Habitat' + otu.map$'Date', by = "margin")
+adonis2(otu.dist ~ otu.map$'Treatment' + otu.map$'Habitat' + otu.map$'Plot')
+adonis2(formula = otu.dist ~ Treatment * Habitat, data = otu.map)
+
+# Test of dispersion
+set.seed(123)
+betadisp_result <- betadisper(otu.dist, otu.map$"Treatment")
+permutest_result <- permutest(betadisp_result, permutations = 999)
+print(permutest_result)
+
+set.seed(123)
+betadisp_result <- betadisper(otu.dist, otu.map$"Habitat")
+permutest_result <- permutest(betadisp_result, permutations = 999)
+print(permutest_result)
+```
+
+
+# Figure 2B - Prokaryotes PCoA
+
+# Load input data
+```{r}
+lnu.asv <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu.asv.RDS")
+wildfire_asv_map <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_asv_map.RDS")
+```
+# Load packages
+```{r}
+library(vegan)
+library(dplyr)
+library(tidyverse)
+```
+# Make PCoA Plot
+```{r}
+# create rarefaction curve to determine rarefaction threshold for abundance table
+# don't need to run the below code every time, only the first time to figure out what to rarefy to
+# asv.rarecurve <- rarecurve(t(lnu.asv), step = 100) 
+# x <- map_dfr(asv.rarecurve, bind_rows) %>% bind_cols(colnames(lnu.asv),.)
+# x <- as.data.frame(x)
+# row.names(x) <- x[, 1]
+
+#based on x dataframe, choose sample size to rarefy to
+set.seed(24)
+asv.rare <- t(rrarefy(t(lnu.asv), sample = 17700))
+
+# remove singletons --> 4,933 contigs
+asv.rare <- data.frame(asv.rare) %>%
+  rmv_sngl()
+
+#bray-curtis dissimilarity distance matrix 
+asv.dist=vegdist(t(asv.rare), method = "bray")
+asv.pcoa <- pcoa(asv.dist)
+asv.pcoa.points <- pcoa.points(asv.pcoa)
+asv.map <- pcoa.map.asv(asv.pcoa.points, wildfire_asv_map)
+variance(asv.pcoa, 1)
+variance(asv.pcoa, 2)
+
+ggplot(asv.map, aes(x=pcoa1, y=pcoa2, color=Treatment, shape = Habitat))+
+  geom_point(size = 3) +
+  labs(x = "PCo1 (20.89% Variance Explained)", 
+       y = "PCo2 (11.47% Variance Explained)",
+       title = "All LNU 16S")+
+  theme(axis.title = element_text(size = 18)) +
+  theme(legend.text = element_text(size = 18), legend.position = "right") +
+  theme(legend.title = element_text(size = 18)) +
+  theme(axis.text = element_text(size = 18)) +
+  scale_color_manual(values=pf_treatment_color, limits=pf_treatment_order) +
+  theme(panel.background=element_rect(fill="white"), 
+      panel.grid.major = element_line(color = "lightgrey"), 
+      panel.grid.minor = element_line(color = "lightgrey"))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PCoA/prokaryotes/all_LNU_ASV_pcoa_treatment_habitat.pdf", width = 200, height = 125, units = "mm", dpi = 500)
+```
+# Statistics
+```{r}
+# PERMANOVA
+adonis2(asv.dist ~ asv.map$'Habitat' + asv.map$'Treatment' + asv.map$'Date', by = "margin")
+adonis2(formula = asv.dist ~ Treatment * Habitat, data = asv.map)
+adonis2(asv.dist ~ asv.map$'Plot')
+
+# PERMDISP
+set.seed(123)
+betadisp_result <- betadisper(asv.dist, asv.map$"Habitat")
+permutest_result <- permutest(betadisp_result, permutations = 999)
+print(permutest_result)
+
+set.seed(123)
+betadisp_result <- betadisper(asv.dist, asv.map$"Treatment")
+permutest_result <- permutest(betadisp_result, permutations = 999)
+print(permutest_result)
+```
+
+# Figure 2C - Viruses by Predicted Host in Chaparral (T3)
+# Load input data
+```{r}
+iphop.phylum <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/iphop_phylum.RDS")
+# only read mapping within the LNU dataset (including the natural reserves sites from chaparral and woodland)
+lnu_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_otu.RDS")
+# metadata
+wildfire_data <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
+
+T3.ch.otu <- lnu_otu[, wildfire_data$Habitat=="Chaparral" & wildfire_data$TimePoint=="T3"] %>%
+  rmv_sngl()
+T3.ch.otu.rel <- relativize(T3.ch.otu)
+colSums(T3.ch.otu.rel)
+T3.ch.map <- subset(wildfire_data, Habitat=="Chaparral" & wildfire_data$TimePoint=="T3")
+richness <- colSums(T3.ch.otu.rel > 0)
+T3.ch.map$Richness <- richness
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(T3.ch.otu.rel), T3.ch.map$ViromeID)
+```
+# Make Stacked Bar Plot
+```{r}
+# name row.names of otu.rel
+T3.ch.otu.rel.otu <- T3.ch.otu.rel %>%
+  rownames_to_column(var = "vOTU")
+T3.ch.otu.rel.phylum <- merge(iphop.phylum, T3.ch.otu.rel.otu, by = "vOTU", all.y = TRUE)
+
+# replace NA Host Phylum with "unknown"
+T3.ch.otu.rel.phylum <- T3.ch.otu.rel.phylum %>% mutate(HostPhylum = ifelse(is.na(HostPhylum), "Unknown", HostPhylum))
+# remove OTU column
+T3.ch.otu.rel.phylum <- T3.ch.otu.rel.phylum %>% select(-vOTU) 
+T3.ch.otu.phylum.long <- pivot_longer(T3.ch.otu.rel.phylum, cols=2:13, names_to = "ViromeID", values_to = "RelAbd")
+T3.ch.otu.phylum.stack <- group_by(T3.ch.otu.phylum.long, HostPhylum, ViromeID) %>%
+  dplyr::summarize(RelAbd=sum(RelAbd))
+T3.ch.otu.phylum.stack <- T3.ch.otu.phylum.stack %>%
+  group_by(HostPhylum) %>%
+  mutate(NewHostPhylum = ifelse(all(RelAbd < 0.001), 'Other', HostPhylum)) %>%
+  ungroup()
+
+iphop_wildfire_data <- iphop_wildfire_data %>%
+  mutate(Treatment_ID = paste(Treatment, "-", SubPlot)) %>%
+  arrange(Treatment_ID)
+
+# Prep data frame for plotting
+T3.ch.otu.phylum.map <- merge(T3.ch.otu.phylum.stack, iphop_wildfire_data, by="ViromeID")
+T3.ch.otu.phylum.map <- T3.ch.otu.phylum.map[T3.ch.otu.phylum.map$NewHostPhylum != "Unknown", ]
+
+unique(T3.ch.otu.phylum.map$NewHostPhylum)
+
+# Plot
+hostphylum <- ggplot(T3.ch.otu.phylum.map, aes(x=Treatment_ID, y=RelAbd, fill=NewHostPhylum))+
+    labs(x="Sample ID", 
+       y ="Relative Abundance",
+       title = "T3, Chaparral - LNU vOTU Host Prediction by Sample")+
+  annotate('rect', xmin = -Inf, xmax = 4.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
+  geom_bar(stat="identity")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  scale_x_discrete(labels = T3.ch.map$TimePoint_ID) +
+  geom_vline(xintercept = c(4.5), linetype = "solid", color = "black", linewidth = 0.5)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/virome/chaparral_T3_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+# Statistics
+```{r}
+T3.ch.host.stats <- T3.ch.otu.phylum.map
+
+acido_ch <- T3.ch.host.stats %>%
+  filter(HostPhylum == "Acidobacteriota")
+actino_ch <- T3.ch.host.stats %>%
+  filter(HostPhylum == "Actinobacteriota")
+bact_ch <- T3.ch.host.stats %>%
+  filter(HostPhylum == "Bacteroidota")
+firm_ch <- T3.ch.host.stats %>%
+  filter(HostPhylum == "Firmicutes")
+gemma_ch <- T3.ch.host.stats %>%
+  filter(HostPhylum == "Gemmatimonadota")
+myxo_ch <- T3.ch.host.stats %>%
+  filter(HostPhylum == "Myxococcota")
+nitro_ch <- T3.ch.host.stats %>%
+  filter(HostPhylum == "Nitrospirota")
+proteo_ch <- T3.ch.host.stats %>%
+  filter(HostPhylum == "Proteobacteria")
+
+kruskal.test(RelAbd ~ Treatment, acido_ch)
+kruskal.test(RelAbd ~ Treatment, actino_ch)
+kruskal.test(RelAbd ~ Treatment, bact_ch)
+kruskal.test(RelAbd ~ Treatment, firm_ch)
+kruskal.test(RelAbd ~ Treatment, gemma_ch)
+kruskal.test(RelAbd ~ Treatment, myxo_ch)
+kruskal.test(RelAbd ~ Treatment, nitro_ch)
+kruskal.test(RelAbd ~ Treatment, proteo_ch)
+```
+
+# Figure 2D - Viruses by Predicted Host in Woodland (T3)
+# Load input data
+```{r}
+iphop.phylum <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/iphop_phylum.RDS")
+
+# only read mapping within the LNU dataset (including the natural reserves sites from chaparral and woodland)
+lnu_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_otu.RDS")
+# metadata
+wildfire_data <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
+
+T3.wo.otu <- lnu_otu[, wildfire_data$Habitat=="Woodland" & wildfire_data$TimePoint=="T3"] %>%
+  rmv_sngl()
+T3.wo.otu.rel <- relativize(T3.wo.otu)
+colSums(T3.wo.otu.rel)
+T3.wo.map <- subset(wildfire_data, Habitat=="Woodland" & wildfire_data$TimePoint=="T3")
+richness <- colSums(T3.wo.otu.rel > 0)
+T3.wo.map$Richness <- richness
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(T3.wo.otu.rel), T3.wo.map$ViromeID)
+```
+# Make Stacked Bar Plot
+```{r}
+# name row.names of otu.rel
+T3.wo.otu.rel.otu <- T3.wo.otu.rel %>%
+  rownames_to_column(var = "vOTU")
+T3.wo.otu.rel.phylum <- merge(iphop.phylum, T3.wo.otu.rel.otu, by = "vOTU", all.y = TRUE)
+
+# replace NA Host Phylum with "unknown"
+T3.wo.otu.rel.phylum <- T3.wo.otu.rel.phylum %>% mutate(HostPhylum = ifelse(is.na(HostPhylum), "Unknown", HostPhylum))
+# remove OTU column
+T3.wo.otu.rel.phylum <- T3.wo.otu.rel.phylum %>% select(-vOTU) 
+T3.wo.otu.phylum.long <- pivot_longer(T3.wo.otu.rel.phylum, cols=2:13, names_to = "ViromeID", values_to = "RelAbd")
+T3.wo.otu.phylum.stack <- group_by(T3.wo.otu.phylum.long, HostPhylum, ViromeID) %>%
+  dplyr::summarize(RelAbd=sum(RelAbd))
+T3.wo.otu.phylum.stack <- T3.wo.otu.phylum.stack %>%
+  group_by(HostPhylum) %>%
+  mutate(NewHostPhylum = ifelse(all(RelAbd < 0.001), 'Other', HostPhylum)) %>%
+  ungroup()
+
+iphop_wildfire_data <- wildfire_data %>%
+  mutate(Time_ID = paste(TimePoint, "-", SubPlot)) %>%
+  arrange(Time_ID)
+iphop_wildfire_data <- iphop_wildfire_data %>%
+  mutate(Treatment_ID = paste(Treatment, "-", SubPlot)) %>%
+  arrange(Treatment_ID)
+
+# Prep data frame for plotting
+T3.wo.otu.phylum.map <- merge(T3.wo.otu.phylum.stack, iphop_wildfire_data, by="ViromeID")
+T3.wo.otu.phylum.map <- T3.wo.otu.phylum.map[T3.wo.otu.phylum.map$NewHostPhylum != "Unknown", ]
+unique(T3.wo.otu.phylum.map$NewHostPhylum)
+
+# Plot
+hostphylum <- ggplot(T3.wo.otu.phylum.map, aes(x=Treatment_ID, y=RelAbd, fill=NewHostPhylum))+
+    labs(x="Sample ID", 
+       y ="Relative Abundance",
+       title = "T3, Woodland - LNU vOTU Host Prediction by Sample")+
+  annotate('rect', xmin = -Inf, xmax = 4.5, ymin = -Inf, ymax = Inf, fill = 'lightgray', alpha = 0.5) +
+  geom_bar(stat="identity")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(4.5), linetype = "solid", color = "black", linewidth = 0.5)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/virome/woodland_T3_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+# Statistics
+```{r}
+T3.wo.host.stats <- T3.wo.otu.phylum.map
+
+cyano_wo <- T3.wo.host.stats %>%
+  filter(HostPhylum == "Cyanobacteria")
+actino_wo <- T3.wo.host.stats %>%
+  filter(HostPhylum == "Actinobacteriota")
+bact_wo <- T3.wo.host.stats %>%
+  filter(HostPhylum == "Bacteroidota")
+firm_wo <- T3.wo.host.stats %>%
+  filter(HostPhylum == "Firmicutes")
+gemma_wo <- T3.wo.host.stats %>%
+  filter(HostPhylum == "Gemmatimonadota")
+myxo_wo <- T3.wo.host.stats %>%
+  filter(HostPhylum == "Myxococcota")
+nitro_wo <- T3.wo.host.stats %>%
+  filter(HostPhylum == "Nitrospirota")
+proteo_wo <- T3.wo.host.stats %>%
+  filter(HostPhylum == "Proteobacteria")
+
+kruskal.test(RelAbd ~ Treatment, cyano_wo)
+kruskal.test(RelAbd ~ Treatment, actino_wo)
+kruskal.test(RelAbd ~ Treatment, bact_wo)
+kruskal.test(RelAbd ~ Treatment, firm_wo)
+kruskal.test(RelAbd ~ Treatment, gemma_wo)
+kruskal.test(RelAbd ~ Treatment, myxo_wo)
+kruskal.test(RelAbd ~ Treatment, nitro_wo)
+kruskal.test(RelAbd ~ Treatment, proteo_wo)
+```
+
+# Figures 2E - 2H (Prokaryotes, T3-T5)
+# Load input data
+```{r}
+lnu.asv <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu.asv.RDS")
+tax_filtered <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/tax_filtered.RDS")
+wildfire_asv_map <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_asv_map.RDS")
+```
+# Prepare data for subsetting (Chaparral)
+```{r}
+bc.ch.asv <- lnu.asv[, wildfire_asv_map$TimePoint %in% c("T3", "T4", "T5") & wildfire_asv_map$Habitat=="Chaparral"] 
+
+# create rarefaction curve to determine rarefaction threshold for abundance table
+# don't need to run the below code every time, only the first time to figure out what to rarefy to
+#asv.rarecurve <- rarecurve(t(bc.ch.asv), step = 100) 
+#x <- map_dfr(asv.rarecurve, bind_rows) %>% bind_cols(colnames(bc.ch.asv),.)
+#x <- as.data.frame(x)
+#row.names(x) <- x[, 1]
+
+#based on x dataframe, choose sample size to rarefy to
+set.seed(24)
+bc.ch.asv.rare <- t(rrarefy(t(bc.ch.asv), sample = 17700))
+
+# remove singletons --> 2,475 contigs
+bc.ch.asv.rare <- data.frame(bc.ch.asv.rare) %>%
+  rmv_sngl()
+
+bc.ch_map <- subset(wildfire_asv_map, TimePoint %in% c("T3", "T4", "T5") & Habitat == "Chaparral")
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(bc.ch.asv), bc.ch_map$ASV_ID)
+
+# add OTU_ID back onto asv.rare
+bc.ch.asv.rare$OTU_ID <- rownames(bc.ch.asv.rare)
+
+# Join taxonomy and abundance data together
+bc.ch.tax_lnu <- left_join(bc.ch.asv.rare, tax_filtered, by = "OTU_ID")
+# make sure asv.rare is in the same order as tax_lnu (return = TRUE)
+check_column <- "OTU_ID"
+all(bc.ch.asv.rare[[check_column]] == bc.ch.tax_lnu[[check_column]])
+unique(bc.ch.tax_lnu$Phylum)
+
+# pivot table and group by Phylum
+bc.ch.tax_lnu.long <- pivot_longer(bc.ch.tax_lnu, cols=1:35, names_to = "ASV_ID", values_to = "counts")
+bc.ch.lnu.phylum.long <- group_by(bc.ch.tax_lnu.long, Phylum, ASV_ID) %>%
+  dplyr::summarize(counts=sum(counts))
+
+# collapse phyla into "other" category if represents less than 2%, which is 354 (rarefied to 17,700)
+bc.ch.lnu.phylum.long$Phylum <- as.character(bc.ch.lnu.phylum.long$Phylum)
+bc.ch.lnu.phylum.long <- bc.ch.lnu.phylum.long %>%
+  group_by(Phylum) %>%
+  mutate(NewPhylum = ifelse(all(counts < 354), 'Other', Phylum)) %>%
+  ungroup()
+# find out which phyla are represented (used for making legend)
+unique(bc.ch.lnu.phylum.long$NewPhylum)
+unique(bc.ch.lnu.phylum.long$Phylum)
+
+bc.ch_map <- bc.ch_map %>%
+  mutate(Time_Treatment_ID = paste(TimePoint, "-", Treatment, "-", SubPlot)) %>%
+  arrange(Time_Treatment_ID)
+bc.ch_map <- bc.ch_map %>%
+  mutate(Time_ID = paste(TimePoint, "-", SubPlot))
+# Prep data frame for plotting
+bc.ch.lnu.phylum.map <- merge(bc.ch.lnu.phylum.long, bc.ch_map, by="ASV_ID")
+```
+# Prepare data for subsetting (Woodland)
+```{r}
+bc.wo.asv <- lnu.asv[, wildfire_asv_map$TimePoint %in% c("T3", "T4", "T5") & wildfire_asv_map$Habitat=="Woodland"] 
+
+# create rarefaction curve to determine rarefaction threshold for abundance table
+# don't need to run the below code every time, only the first time to figure out what to rarefy to
+#asv.rarecurve <- rarecurve(t(bc.wo.asv), step = 100) 
+#x <- map_dfr(asv.rarecurve, bind_rows) %>% bind_cols(colnames(bc.wo.asv),.)
+#x <- as.data.frame(x)
+#row.names(x) <- x[, 1]
+
+#based on x dataframe, choose sample size to rarefy to
+set.seed(24)
+bc.wo.asv.rare <- t(rrarefy(t(bc.wo.asv), sample = 18700))
+
+# remove singletons --> 2,515 contigs
+bc.wo.asv.rare <- data.frame(bc.wo.asv.rare) %>%
+  rmv_sngl()
+
+bc.wo_map <- subset(wildfire_asv_map, TimePoint %in% c("T3", "T4", "T5") & Habitat == "Woodland")
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(bc.wo.asv), bc.wo_map$ASV_ID)
+
+# add OTU_ID back onto asv.rare
+bc.wo.asv.rare$OTU_ID <- rownames(bc.wo.asv.rare)
+
+# Join taxonomy and abundance data together
+bc.wo.tax_lnu <- left_join(bc.wo.asv.rare, tax_filtered, by = "OTU_ID")
+# make sure asv.rare is in the same order as tax_lnu (return = TRUE)
+check_column <- "OTU_ID"
+all(bc.wo.asv.rare[[check_column]] == bc.wo.tax_lnu[[check_column]])
+unique(bc.wo.tax_lnu$Phylum)
+
+# pivot table and group by Phylum
+bc.wo.tax_lnu.long <- pivot_longer(bc.wo.tax_lnu, cols=1:36, names_to = "ASV_ID", values_to = "counts")
+bc.wo.lnu.phylum.long <- group_by(bc.wo.tax_lnu.long, Phylum, ASV_ID) %>%
+  dplyr::summarize(counts=sum(counts))
+
+# collapse phyla into "other" category if represents less than 2%, which is 374 (rarefied to 18,700)
+bc.wo.lnu.phylum.long$Phylum <- as.character(bc.wo.lnu.phylum.long$Phylum)
+bc.wo.lnu.phylum.long <- bc.wo.lnu.phylum.long %>%
+  group_by(Phylum) %>%
+  mutate(NewPhylum = ifelse(all(counts < 374), 'Other', Phylum)) %>%
+  ungroup()
+# find out which phyla are represented (used for making legend)
+unique(bc.wo.lnu.phylum.long$NewPhylum)
+
+bc.wo_map <- bc.wo_map %>%
+  mutate(Time_Treatment_ID = paste(TimePoint, "-", Treatment, "-", SubPlot)) %>%
+  arrange(Time_Treatment_ID)
+
+bc.wo_map <- bc.wo_map %>%
+  mutate(Time_ID = paste(TimePoint, "-", SubPlot))
+
+# Prep data frame for plotting
+bc.wo.lnu.phylum.map <- merge(bc.wo.lnu.phylum.long, bc.wo_map, by="ASV_ID")
+```
+# Figure 2E - Prokaryotes in Burned Chaparral (T3-T5)
+# Make Stacked Bar Plot
+```{r}
+burn_chaparral.phylum.map <- bc.ch.lnu.phylum.map[(bc.ch.lnu.phylum.map$Treatment=="AfterBurn_Wildfire"),]
+ggplot(burn_chaparral.phylum.map, aes(x=Time_ID, y=counts, fill=NewPhylum))+
+    labs(x="Timepoint - Sub Plot", 
+       y ="Relative Abundance",
+       title = "LNU - Chaparral - burned - 16S rRNA ASV Profile")+
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  #scale_x_discrete(labels = bc.ch_map$TimePoint_ID) +
+  geom_vline(xintercept = c(8.5, 16.5), linetype = "solid", color = "grey20", linewidth = 0.25)+
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/prokaryotes/burn_chaparral.pdf", width = 175, height = 125, units = "mm", dpi = 500)
+```
+# Figure 2G - Prokaryotes in Post-Fire Control Chaparral (T3-T5)
+# Make Stacked Bar Plot
+```{r}
+control_chaparral.phylum.map <- bc.ch.lnu.phylum.map[(bc.ch.lnu.phylum.map$Treatment=="AfterBurn_Control"),]
+ggplot(control_chaparral.phylum.map, aes(x=Time_ID, y=counts, fill=NewPhylum))+
+    labs(x="Timepoint - Sub Plot", 
+       y ="Relative Abundance",
+       title = "LNU - Chaparral - control - 16S rRNA ASV Profile")+
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(4.5, 8.5), linetype = "solid", color = "grey20", linewidth = 0.25)+
+  #scale_x_discrete(labels = bc.ch_map$TimePoint_ID) +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/prokaryotes/control_chaparral.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+
+# Statistics for 2E and 2G (Chaparral)
+```{r}
+T3.asv.stats <- bc.ch.lnu.phylum.map
+
+ch.acido_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Acidobacteriota" & TimePoint == "T3")
+ch.actino_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Actinobacteriota" & TimePoint == "T3")
+ch.bact_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Bacteroidota" & TimePoint == "T3")
+ch.firm_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Firmicutes" & TimePoint == "T3")
+ch.myxo_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Myxococcota" & TimePoint == "T3")
+ch.planc_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Planctomycetota" & TimePoint == "T3")
+ch.proteo_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Proteobacteria" & TimePoint == "T3")
+ch.verru_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Verrucomicrobiota" & TimePoint == "T3")
+
+ch.nitro_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Nitrospirota" & TimePoint == "T3")
+
+kruskal.test(counts ~ Treatment, ch.acido_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.actino_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.bact_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.firm_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.myxo_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.planc_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.proteo_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.verru_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.nitro_phylum.asv) 
+
+T4.asv.stats <- bc.ch.lnu.phylum.map
+
+ch.acido_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Acidobacteriota" & TimePoint == "T4")
+ch.actino_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Actinobacteriota" & TimePoint == "T4")
+ch.bact_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Bacteroidota" & TimePoint == "T4")
+ch.firm_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Firmicutes" & TimePoint == "T4")
+ch.myxo_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Myxococcota" & TimePoint == "T4")
+ch.planc_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Planctomycetota" & TimePoint == "T4")
+ch.proteo_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Proteobacteria" & TimePoint == "T4")
+ch.verru_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Verrucomicrobiota" & TimePoint == "T4")
+
+ch.nitro_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Nitrospirota" & TimePoint == "T4")
+
+kruskal.test(counts ~ Treatment, ch.acido_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.actino_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.bact_phylum.asv)
+kruskal.test(counts ~ Treatment, ch.firm_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.myxo_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.planc_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.proteo_phylum.asv)# significant
+kruskal.test(counts ~ Treatment, ch.verru_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.nitro_phylum.asv) 
+
+T5.asv.stats <- bc.ch.lnu.phylum.map
+
+ch.acido_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Acidobacteriota" & TimePoint == "T5")
+ch.actino_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Actinobacteriota" & TimePoint == "T5")
+ch.bact_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Bacteroidota" & TimePoint == "T5")
+ch.firm_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Firmicutes" & TimePoint == "T5")
+ch.myxo_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Myxococcota" & TimePoint == "T5")
+ch.planc_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Planctomycetota" & TimePoint == "T5")
+ch.proteo_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Proteobacteria" & TimePoint == "T5")
+ch.verru_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Verrucomicrobiota" & TimePoint == "T5")
+ch.nitro_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Nitrospirota" & TimePoint == "T5")
+
+
+kruskal.test(counts ~ Treatment, ch.acido_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.actino_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.bact_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.firm_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.myxo_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.planc_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, ch.proteo_phylum.asv)# significant
+kruskal.test(counts ~ Treatment, ch.verru_phylum.asv) 
+kruskal.test(counts ~ Treatment, ch.nitro_phylum.asv)
+```
+
+# Figure 2F - Prokaryotes in Burned Woodland (T3-T5)
+# Make Stacked Bar Plot
+```{r}
+burn_woodland.phylum.map <- bc.wo.lnu.phylum.map[(bc.wo.lnu.phylum.map$Treatment=="AfterBurn_Wildfire"),]
+ggplot(burn_woodland.phylum.map, aes(x=Time_ID, y=counts, fill=NewPhylum))+
+    labs(x="Timepoint - Sub Plot", 
+       y ="Relative Abundance",
+       title = "LNU - Woodland - burned - 16S rRNA ASV Profile")+
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  #scale_x_discrete(labels = bc.ch_map$TimePoint_ID) +
+  geom_vline(xintercept = c(8.5, 16.5), linetype = "solid", color = "grey20", linewidth = 0.25)+
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/prokaryotes/burn_woodland.pdf", width = 175, height = 125, units = "mm", dpi = 500)
+```
+# Figure 2H - Prokaryotes in Post-Fire Control Woodland (T3-T5)
+# Make Stacked Bar Plot
+```{r}
+control_woodland.phylum.map <- bc.wo.lnu.phylum.map[(bc.wo.lnu.phylum.map$Treatment=="AfterBurn_Control"),]
+ggplot(control_woodland.phylum.map, aes(x=Time_ID, y=counts, fill=NewPhylum))+
+    labs(x="Timepoint - Sub Plot", 
+       y ="Relative Abundance",
+       title = "LNU - Woodland - control - 16S rRNA ASV Profile")+
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(4.5, 8.5), linetype = "solid", color = "grey20", linewidth = 0.25)+
+  #scale_x_discrete(labels = bc.ch_map$TimePoint_ID) +
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/prokaryotes/control_woodland.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+# Statistics for 2F and 2H (Woodland)
+```{r}
+T3.asv.stats <- bc.wo.lnu.phylum.map
+
+wo.acido_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Acidobacteriota" & TimePoint == "T3")
+wo.actino_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Actinobacteriota" & TimePoint == "T3")
+wo.bact_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Bacteroidota" & TimePoint == "T3")
+wo.chloro_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Chloroflexota" & TimePoint == "T3")
+wo.cren_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Crenarchaeota" & TimePoint == "T3")
+wo.firm_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Firmicutes" & TimePoint == "T3")
+wo.myxo_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Myxococcota" & TimePoint == "T3")
+wo.planc_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Planctomycetota" & TimePoint == "T3")
+wo.proteo_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Proteobacteria" & TimePoint == "T3")
+wo.verru_phylum.asv <- T3.asv.stats %>%
+  filter(Phylum == "Verrucomicrobiota" & TimePoint == "T3")
+
+kruskal.test(counts ~ Treatment, wo.acido_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, wo.actino_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.bact_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, wo.chloro_phylum.asv)# significant
+kruskal.test(counts ~ Treatment, wo.cren_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.firm_phylum.asv) 
+kruskal.test(counts ~ Treatment, wo.myxo_phylum.asv) 
+kruskal.test(counts ~ Treatment, wo.planc_phylum.asv) 
+kruskal.test(counts ~ Treatment, wo.proteo_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.verru_phylum.asv) 
+
+T4.asv.stats <- bc.wo.lnu.phylum.map
+
+wo.acido_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Acidobacteriota" & TimePoint == "T4")
+wo.actino_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Actinobacteriota" & TimePoint == "T4")
+wo.bact_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Bacteroidota" & TimePoint == "T4")
+wo.chloro_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Chloroflexota" & TimePoint == "T4")
+wo.cren_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Crenarchaeota" & TimePoint == "T4")
+wo.firm_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Firmicutes" & TimePoint == "T4")
+wo.myxo_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Myxococcota" & TimePoint == "T4")
+wo.planc_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Planctomycetota" & TimePoint == "T4")
+wo.proteo_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Proteobacteria" & TimePoint == "T4")
+wo.verru_phylum.asv <- T4.asv.stats %>%
+  filter(Phylum == "Verrucomicrobiota" & TimePoint == "T4")
+
+kruskal.test(counts ~ Treatment, wo.acido_phylum.asv) 
+kruskal.test(counts ~ Treatment, wo.actino_phylum.asv) 
+kruskal.test(counts ~ Treatment, wo.bact_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.chloro_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.cren_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.firm_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, wo.myxo_phylum.asv) 
+kruskal.test(counts ~ Treatment, wo.planc_phylum.asv) 
+kruskal.test(counts ~ Treatment, wo.proteo_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.verru_phylum.asv) # significant
+
+T5.asv.stats <- bc.wo.lnu.phylum.map
+
+wo.acido_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Acidobacteriota" & TimePoint == "T5")
+wo.actino_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Actinobacteriota" & TimePoint == "T5")
+wo.bact_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Bacteroidota" & TimePoint == "T5")
+wo.chloro_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Chloroflexota" & TimePoint == "T5")
+wo.cren_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Crenarchaeota" & TimePoint == "T5")
+wo.firm_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Firmicutes" & TimePoint == "T5")
+wo.myxo_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Myxococcota" & TimePoint == "T5")
+wo.planc_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Planctomycetota" & TimePoint == "T5")
+wo.proteo_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Proteobacteria" & TimePoint == "T5")
+wo.verru_phylum.asv <- T5.asv.stats %>%
+  filter(Phylum == "Verrucomicrobiota" & TimePoint == "T5")
+
+kruskal.test(counts ~ Treatment, wo.acido_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, wo.actino_phylum.asv) 
+kruskal.test(counts ~ Treatment, wo.bact_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.chloro_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, wo.cren_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.firm_phylum.asv) # significant
+kruskal.test(counts ~ Treatment, wo.myxo_phylum.asv) 
+kruskal.test(counts ~ Treatment, wo.planc_phylum.asv) 
+kruskal.test(counts ~ Treatment, wo.proteo_phylum.asv)
+kruskal.test(counts ~ Treatment, wo.verru_phylum.asv) 
+```
+
+
+
+# FIGURE 3
+# Figure 3A - PIGEONv2.0 db + Blodgett - Pie Chart
+# Load input data
+```{r}
+pigeon3 <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/pigeon3.RDS")
+```
+# Make Pie Chart
+```{r}
+habitat_count <- pigeon3 %>%
+  count(NewHabitat)
+sum <- sum(habitat_count$n)
+habitat_count <- habitat_count %>%
+  filter(!(NewHabitat %in% c("chaparral", "woodland")))
+sum <- sum(habitat_count$n)
+
+habitat_count <- habitat_count %>%
+  mutate(percentage = n / sum(n) * 100, 
+         NewHabitat = factor(NewHabitat, levels = NewHabitat[order(n)]))
+
+ordered_levels <- levels(habitat_count$NewHabitat)
+
+custom_colors <- c("agricultural soil" = "tan3", "grassland" = "lightgreen", "aqueous" = "dodgerblue", "undisturbed mixed conifer forest" = "chartreuse2", "mixed conifer forest" = "chartreuse3", "burned mixed conifer forest" = "darkorange", "soil (other)" = "tan", "tropical rainforest" = "springgreen1", "other" = "pink", "wetland" = "lightblue")
+
+ggplot(habitat_count, aes(x = "", y = n, fill = NewHabitat)) +
+  geom_col(color = "white", linewidth = 1) +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), 
+            position = position_stack(vjust = 0.5),
+            size = 5) +
+  coord_polar("y", start = 0) +
+  labs(title = "PIGEON database + Blodgett") +
+  theme_void() +
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = custom_colors)
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PieChart/pigeon3.pdf", width = 200, height = 200, units = "mm", dpi = 500)
+```
+# Figures 3B-3E
+# Load input data
+```{r}
+# abundance of vOTUs originally found in Blodgett
+lnu_in_Blodgett_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_blodgett_otu.RDS")
+# abundance of vOTUs originally found in PIGEON
+lnu_in_PIGEON_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_in_PIGEON_otu.RDS")
+# metadata
+wildfire_data <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
+
+lnu_in_Blodgett_otu <- lnu_in_Blodgett_otu[, order(names(lnu_in_Blodgett_otu))]
+identical(colnames(lnu_in_Blodgett_otu), wildfire_data$ViromeID)
+
+lnu_in_PIGEON_otu <- lnu_in_PIGEON_otu[, order(names(lnu_in_PIGEON_otu))]
+identical(colnames(lnu_in_PIGEON_otu), wildfire_data$ViromeID)
+```
+# Figure 3B - Chaparral, Burned - Pie Chart
+# Make Pie Chart
+```{r}
+cb_blodgett_otu <- lnu_in_Blodgett_otu[, wildfire_data$Habitat == "Chaparral" & wildfire_data$Treatment == "AfterBurn_Wildfire"]
+cb_blodgett_otu <- cb_blodgett_otu[rowSums(cb_blodgett_otu != 0) > 0, ]
+cb_blodgett <- rownames(cb_blodgett_otu)
+
+cb_pigeon_otu <- lnu_in_PIGEON_otu[, wildfire_data$Habitat == "Chaparral" & wildfire_data$Treatment == "AfterBurn_Wildfire"]
+cb_pigeon_otu <- cb_pigeon_otu[rowSums(cb_pigeon_otu != 0) > 0, ]
+cb_pigeon <- rownames(cb_pigeon_otu)
+
+cb_blodgett <- data.frame(vOTU = cb_blodgett)
+cb_pigeon <- data.frame(vOTU = cb_pigeon)
+cb_Pbl <- rbind(cb_blodgett, cb_pigeon)
+
+cb_Pbl <- merge(cb_Pbl, pigeon3, by = "vOTU", all.x = TRUE)
+cb_Pbl$Habitat <- droplevels(cb_Pbl$Habitat)
+levels(cb_Pbl$Habitat)
+
+cb_Pbl <- cb_Pbl %>%
+  mutate(NewHabitat = case_when(
+    Habitat == "agricultural_soil" ~ "agricultural soil",
+    Habitat == "bluff" ~ "soil (other)",
+    Habitat == "chaparral" ~ "chaparral", 
+    Habitat == "Forest" ~ "mixed conifer forest",
+    Habitat == "Forest_Burned" ~ "burned mixed conifer forest",
+    Habitat == "Forest_Heated30ºC" ~ "mixed conifer forest",
+    Habitat == "Forest_Undisturbed" ~ "undisturbed mixed conifer forest",
+    Habitat == "grassland" ~ "grassland",
+    Habitat == "lake" ~ "aqueous",
+    Habitat == "peat" ~ "soil (other)",
+    Habitat == "Soil" ~ "soil (other)",
+    Habitat == "tropical_rainforest" ~ "tropical rainforest",
+    Habitat == "wetland" ~ "wetland",
+    Habitat == "woodland" ~ "woodland"
+  ))
+
+cb_habitat_count <- cb_Pbl %>%
+  count(NewHabitat)
+cb_habitat_count <- cb_habitat_count %>%
+  filter(!(NewHabitat %in% c("chaparral", "woodland")))
+cb_habitat_count <- cb_habitat_count %>%
+  mutate(percentage = n / sum(n) * 100, 
+         NewHabitat = factor(NewHabitat, levels = ordered_levels))
+
+ggplot(cb_habitat_count, aes(x = "", y = n, fill = NewHabitat)) +
+  geom_col(color = "white", linewidth = 1) +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), 
+            position = position_stack(vjust = 0.5),
+            size = 5) +
+  coord_polar("y", start = 0) +
+  labs(title = "Chaparral - Burned") +
+  theme_void() +
+  theme(legend.position = "right") +
+  scale_fill_manual(values = custom_colors)
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PieChart/cb_pbl.pdf", width = 200, height = 200, units = "mm", dpi = 500)
+```
+# Figure 3C - Woodland, Burned - Pie Chart
+# Make Pie Chart
+```{r}
+wb_blodgett_otu <- lnu_in_Blodgett_otu[, wildfire_data$Habitat == "Woodland" & wildfire_data$Treatment == "AfterBurn_Wildfire"]
+wb_blodgett_otu <- wb_blodgett_otu[rowSums(wb_blodgett_otu != 0) > 0, ]
+wb_blodgett <- rownames(wb_blodgett_otu)
+
+wb_pigeon_otu <- lnu_in_PIGEON_otu[, wildfire_data$Habitat == "Woodland" & wildfire_data$Treatment == "AfterBurn_Wildfire"]
+wb_pigeon_otu <- wb_pigeon_otu[rowSums(wb_pigeon_otu != 0) > 0, ]
+wb_pigeon <- rownames(wb_pigeon_otu)
+
+wb_blodgett <- data.frame(vOTU = wb_blodgett)
+wb_pigeon <- data.frame(vOTU = wb_pigeon)
+wb_Pbl <- rbind(wb_blodgett, wb_pigeon)
+
+wb_Pbl <- merge(wb_Pbl, pigeon3, by = "vOTU", all.x = TRUE)
+wb_Pbl$Habitat <- droplevels(wb_Pbl$Habitat)
+levels(wb_Pbl$Habitat)
+
+wb_Pbl <- wb_Pbl %>%
+  mutate(NewHabitat = case_when(
+    Habitat == "agricultural_soil" ~ "agricultural soil",
+    Habitat == "bluff" ~ "soil (other)",
+    Habitat == "chaparral" ~ "chaparral", 
+    Habitat == "Forest" ~ "mixed conifer forest",
+    Habitat == "Forest_Burned" ~ "burned mixed conifer forest",
+    Habitat == "Forest_Heated30ºC" ~ "mixed conifer forest",
+    Habitat == "Forest_Undisturbed" ~ "undisturbed mixed conifer forest",
+    Habitat == "grassland" ~ "grassland",
+    Habitat == "lake" ~ "aqueous",
+    Habitat == "peat" ~ "soil (other)",
+    Habitat == "Soil" ~ "soil (other)",
+    Habitat == "tropical_rainforest" ~ "tropical rainforest",
+    Habitat == "wetland" ~ "wetland",
+    Habitat == "woodland" ~ "woodland"
+  ))
+
+wb_habitat_count <- wb_Pbl %>%
+  count(NewHabitat)
+wb_habitat_count <- wb_habitat_count %>%
+  filter(!(NewHabitat %in% c("chaparral", "woodland")))
+wb_habitat_count <- wb_habitat_count %>%
+  mutate(percentage = n / sum(n) * 100, 
+         NewHabitat = factor(NewHabitat, levels = ordered_levels))
+
+ggplot(wb_habitat_count, aes(x = "", y = n, fill = NewHabitat)) +
+  geom_col(color = "white", linewidth = 1) +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), 
+            position = position_stack(vjust = 0.5),
+            size = 5) +
+  coord_polar("y", start = 0) +
+  labs(title = "Woodland - Burned") +
+  theme_void() +
+  theme(legend.position = "right") +
+  scale_fill_manual(values = custom_colors)
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PieChart/wb_pbl.pdf", width = 200, height = 200, units = "mm", dpi = 500)
+```
+# Figure 3D - Chaparral, Post-Fire Controls - Pie Chart
+# Make Pie Chart
+```{r}
+cu_blodgett_otu <- lnu_in_Blodgett_otu[, wildfire_data$Habitat == "Chaparral" & wildfire_data$Treatment != "AfterBurn_Wildfire"]
+cu_blodgett_otu <- cu_blodgett_otu[rowSums(cu_blodgett_otu != 0) > 0, ]
+cu_blodgett <- rownames(cu_blodgett_otu)
+
+cu_pigeon_otu <- lnu_in_PIGEON_otu[, wildfire_data$Habitat == "Chaparral" & wildfire_data$Treatment != "AfterBurn_Wildfire"]
+cu_pigeon_otu <- cu_pigeon_otu[rowSums(cu_pigeon_otu != 0) > 0, ]
+cu_pigeon <- rownames(cu_pigeon_otu)
+
+cu_blodgett <- data.frame(vOTU = cu_blodgett)
+cu_pigeon <- data.frame(vOTU = cu_pigeon)
+cu_Pbl <- rbind(cu_blodgett, cu_pigeon)
+
+cu_Pbl <- merge(cu_Pbl, pigeon3, by = "vOTU", all.x = TRUE)
+cu_Pbl$Habitat <- droplevels(cu_Pbl$Habitat)
+levels(cu_Pbl$Habitat)
+
+cu_Pbl <- cu_Pbl %>%
+  mutate(NewHabitat = case_when(
+    Habitat == "agricultural_soil" ~ "agricultural soil",
+    Habitat == "bluff" ~ "soil (other)",
+    Habitat == "chaparral" ~ "chaparral", 
+    Habitat == "Forest" ~ "mixed conifer forest",
+    Habitat == "Forest_Burned" ~ "burned mixed conifer forest",
+    Habitat == "Forest_Heated30ºC" ~ "mixed conifer forest",
+    Habitat == "Forest_Undisturbed" ~ "undisturbed mixed conifer forest",
+    Habitat == "grassland" ~ "grassland",
+    Habitat == "lake" ~ "aqueous",
+    Habitat == "peat" ~ "soil (other)",
+    Habitat == "Soil" ~ "soil (other)",
+    Habitat == "tropical_rainforest" ~ "tropical rainforest",
+    Habitat == "wetland" ~ "wetland",
+    Habitat == "woodland" ~ "woodland"
+  ))
+
+cu_habitat_count <- cu_Pbl %>%
+  count(NewHabitat)
+cu_habitat_count <- cu_habitat_count %>%
+  filter(!(NewHabitat %in% c("chaparral", "woodland")))
+cu_habitat_count <- cu_habitat_count %>%
+  mutate(percentage = n / sum(n) * 100, 
+         NewHabitat = factor(NewHabitat, levels = ordered_levels))
+
+ggplot(habitat_count, aes(x = "", y = n, fill = NewHabitat)) +
+  geom_col(color = "white", linewidth = 1) +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), 
+            position = position_stack(vjust = 0.5),
+            size = 5) +
+  coord_polar("y", start = 0) +
+  labs(title = "Chaparral - Control") +
+  theme_void() +
+  theme(legend.position = "right") +
+  scale_fill_manual(values = custom_colors)
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PieChart/cu_Pbl.pdf", width = 200, height = 200, units = "mm", dpi = 500)
+```
+# Figure 3E - Woodland, Post-Fire Controls - Pie Chart
+# Make Pie Chart
+```{r}
+wu_blodgett_otu <- lnu_in_Blodgett_otu[, wildfire_data$Habitat == "Woodland" & wildfire_data$Treatment != "AfterBurn_Wildfire"]
+wu_blodgett_otu <- wu_blodgett_otu[rowSums(wu_blodgett_otu != 0) > 0, ]
+wu_blodgett <- rownames(wu_blodgett_otu)
+
+wu_pigeon_otu <- lnu_in_PIGEON_otu[, wildfire_data$Habitat == "Woodland" & wildfire_data$Treatment != "AfterBurn_Wildfire"]
+wu_pigeon_otu <- wu_pigeon_otu[rowSums(wu_pigeon_otu != 0) > 0, ]
+wu_pigeon <- rownames(wu_pigeon_otu)
+
+wu_blodgett <- data.frame(vOTU = wu_blodgett)
+wu_pigeon <- data.frame(vOTU = wu_pigeon)
+wu_Pbl <- rbind(wu_blodgett, wu_pigeon)
+
+wu_Pbl <- merge(wu_Pbl, pigeon3, by = "vOTU", all.x = TRUE)
+wu_Pbl$Habitat <- droplevels(wu_Pbl$Habitat)
+levels(wu_Pbl$Habitat)
+
+wu_Pbl <- wu_Pbl %>%
+  mutate(NewHabitat = case_when(
+    Habitat == "agricultural_soil" ~ "agricultural soil",
+    Habitat == "bluff" ~ "soil (other)",
+    Habitat == "chaparral" ~ "chaparral", 
+    Habitat == "Forest" ~ "mixed conifer forest",
+    Habitat == "Forest_Burned" ~ "burned mixed conifer forest",
+    Habitat == "Forest_Heated30ºC" ~ "mixed conifer forest",
+    Habitat == "Forest_Undisturbed" ~ "undisturbed mixed conifer forest",
+    Habitat == "grassland" ~ "grassland",
+    Habitat == "lake" ~ "aqueous",
+    Habitat == "peat" ~ "soil (other)",
+    Habitat == "Soil" ~ "soil (other)",
+    Habitat == "tropical_rainforest" ~ "tropical rainforest",
+    Habitat == "wetland" ~ "wetland",
+    Habitat == "woodland" ~ "woodland"
+  ))
+
+wu_habitat_count <- wu_Pbl %>%
+  count(NewHabitat)
+wu_habitat_count <- wu_habitat_count %>%
+  filter(!(NewHabitat %in% c("chaparral", "woodland")))
+wu_habitat_count <- wu_habitat_count %>%
+  mutate(percentage = n / sum(n) * 100, 
+         NewHabitat = factor(NewHabitat, levels = ordered_levels))
+
+ggplot(wu_habitat_count, aes(x = "", y = n, fill = NewHabitat)) +
+  geom_col(color = "white", linewidth = 1) +
+  geom_text(aes(label = paste0(round(percentage, 1), "%")), 
+            position = position_stack(vjust = 0.5),
+            size = 5) +
+  coord_polar("y", start = 0) +
+  labs(title = "Woodland - Control") +
+  theme_void() +
+  theme(legend.position = "right") +
+  scale_fill_manual(values = custom_colors)
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PieChart/wu_Pbl.pdf", width = 200, height = 200, units = "mm", dpi = 500)
+```
+
+
+
+# SUPPLEMENTARY FIGURE 1
+# Supplementary Figure 1A
+# Load input data
+```{r}
+otu.rel <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/otu.rel.RDS")
+wildfire_data <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
+```
+# Load packages
+```{r}
+library(ComplexUpset)
+```
+# Make UpSet Plot
+```{r}
+# Habitat
+map <- wildfire_data
+cbbmap <- map %>%
+  filter(Date=="11/1/2019"&Habitat=="Chaparral")
+wbbmap <- map %>%
+  filter(Date=="11/1/2019"&Habitat=="Woodland")
+cabmap <- map %>%
+  filter(Treatment=="AfterBurn_Wildfire"&Habitat=="Chaparral")
+wabmap <- map %>%
+  filter(Treatment=="AfterBurn_Wildfire"&Habitat=="Woodland")
+cacmap <- map %>%
+  filter(Treatment=="AfterBurn_Control"&Habitat=="Chaparral")
+wacmap <- map %>%
+  filter(Treatment=="AfterBurn_Control"&Habitat=="Woodland")
+
+upset <- otu.rel
+Chaparral_BeforeBurn <- upset[,colnames(upset)%in%cbbmap$ViromeID]
+Woodland_BeforeBurn <- upset[,colnames(upset)%in%wbbmap$ViromeID]
+Chaparral_AfterBurn <- upset[,colnames(upset)%in%cabmap$ViromeID]
+Woodland_AfterBurn <- upset[,colnames(upset)%in%wabmap$ViromeID]
+Chaparral_AfterControl <- upset[,colnames(upset)%in%cacmap$ViromeID]
+Woodland_AfterControl <- upset[,colnames(upset)%in%wacmap$ViromeID]
+
+Chaparral_BeforeBurn_pa <- rowSums(Chaparral_BeforeBurn)>0  
+Woodland_BeforeBurn_pa <- rowSums(Woodland_BeforeBurn) >0
+Chaparral_AfterBurn_pa <- rowSums(Chaparral_AfterBurn)>0  
+Woodland_AfterBurn_pa <- rowSums(Woodland_AfterBurn) >0
+Chaparral_AfterControl_pa <- rowSums(Chaparral_AfterControl)>0  
+Woodland_AfterControl_pa <- rowSums(Woodland_AfterControl) >0
+
+upsetdata <- data.frame(Chaparral_BeforeBurn=Chaparral_BeforeBurn_pa, Woodland_BeforeBurn=Woodland_BeforeBurn_pa, Chaparral_AfterBurn=Chaparral_AfterBurn_pa, Woodland_AfterBurn=Woodland_AfterBurn_pa, Chaparral_AfterControl=Chaparral_AfterControl_pa, Woodland_AfterControl=Woodland_AfterControl_pa)
+
+upset(data = upsetdata, intersect = c("Woodland_BeforeBurn","Woodland_AfterControl","Woodland_AfterBurn", "Chaparral_BeforeBurn","Chaparral_AfterControl","Chaparral_AfterBurn"), 
+  name="vOTU Detection in Viromes by Habitat and Disturbance",
+      base_annotations = list('Intersection size (number of vOTUs)'=intersection_size(
+        text=list(hjust=-0.05, vjust=0.5, angle = 90))),
+      min_size = 10,
+      width_ratio = 0.125,
+      themes=upset_default_themes(text=element_text(size = 20)),
+      sort_sets=FALSE,
+      set_sizes=(upset_set_size()+theme(axis.text.x = element_text(angle=90))),
+      stripes=upset_stripes(colors=c('#39A96B','#39A96B','#39A96B','goldenrod1','goldenrod1','goldenrod1')))
+
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/Upset/Habitat_Disturbance_upset.pdf", width = 300, height = 200, units = "mm", dpi = 500)
+```
+# Supplementary Figure 1B
+# Load Input Data
+```{r}
+iphop.phylum <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/iphop_phylum.RDS")
+# only read mapping within the LNU dataset (including the natural reserves sites from chaparral and woodland)
+lnu_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_otu.RDS")
+# metadata
+wildfire_data <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
+
+f.ch.otu <- lnu_otu[, wildfire_data$Habitat=="Chaparral" & wildfire_data$Treatment=="AfterBurn_Wildfire"] %>%
+  rmv_sngl()
+f.ch.otu.rel <- relativize(f.ch.otu)
+colSums(f.ch.otu.rel)
+f.ch.map <- subset(wildfire_data, Habitat=="Chaparral" & wildfire_data$Treatment=="AfterBurn_Wildfire")
+richness <- colSums(f.ch.otu.rel > 0)
+f.ch.map$Richness <- richness
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(f.ch.otu.rel), f.ch.map$ViromeID)
+```
+# Make Stacked Bar Plot
+```{r}
+# name row.names of otu.rel
+f.ch.otu.rel.otu <- f.ch.otu.rel %>%
+  rownames_to_column(var = "vOTU")
+f.ch.otu.rel.phylum <- merge(iphop.phylum, f.ch.otu.rel.otu, by = "vOTU", all.y = TRUE)
+
+# replace NA Host Phylum with "unknown"
+f.ch.otu.rel.phylum <- f.ch.otu.rel.phylum %>% mutate(HostPhylum = ifelse(is.na(HostPhylum), "Unknown", HostPhylum))
+# remove OTU column
+f.ch.otu.rel.phylum <- f.ch.otu.rel.phylum %>% select(-vOTU) 
+f.ch.otu.phylum.long <- pivot_longer(f.ch.otu.rel.phylum, cols=2:16, names_to = "ViromeID", values_to = "RelAbd")
+f.ch.otu.phylum.stack <- group_by(f.ch.otu.phylum.long, HostPhylum, ViromeID) %>%
+  dplyr::summarize(RelAbd=sum(RelAbd))
+f.ch.otu.phylum.stack <- f.ch.otu.phylum.stack %>%
+  group_by(HostPhylum) %>%
+  mutate(NewHostPhylum = ifelse(all(RelAbd < 0.001), 'Other', HostPhylum)) %>%
+  ungroup()
+
+iphop_wildfire_data <- wildfire_data %>%
+  mutate(Time_ID = paste(TimePoint, "-", SubPlot)) %>%
+  arrange(Time_ID)
+
+f.ch.otu.phylum.map <- merge(f.ch.otu.phylum.stack, iphop_wildfire_data, by="ViromeID")
+f.ch.otu.phylum.map <- f.ch.otu.phylum.map[f.ch.otu.phylum.map$NewHostPhylum != "Unknown", ]
+unique(f.ch.otu.phylum.map$NewHostPhylum)
+
+hostphylum <- ggplot(f.ch.otu.phylum.map, aes(x=Time_ID, y=RelAbd, fill=NewHostPhylum))+
+    labs(x="Sample ID", 
+       y ="Relative Abundance",
+       title = "Chaparral - LNU vOTU Host Prediction by Sample")+
+  geom_bar(stat="identity")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(3.5, 11.5), linetype = "solid", color = "black", linewidth = 0.5)+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+hostphylum <- ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/virome/chaparral_burned_hostLNU_phylum.pdf", width = 200, height = 150, units = "mm", dpi = 500)
+```
+# Supplementary Figure 1C
+# Load Input Data
+```{r}
+iphop.phylum <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/iphop_phylum.RDS")
+# only read mapping within the LNU dataset (including the natural reserves sites from chaparral and woodland)
+lnu_otu <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_otu.RDS")
+# metadata
+wildfire_data <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_vOTU_map.RDS")
+
+f.wo.otu <- lnu_otu[, wildfire_data$Habitat=="Woodland" & wildfire_data$Treatment=="AfterBurn_Wildfire"] %>%
+  rmv_sngl()
+f.wo.otu.rel <- relativize(f.wo.otu)
+colSums(f.wo.otu.rel)
+f.wo.map <- subset(wildfire_data, Habitat=="Woodland" & wildfire_data$Treatment=="AfterBurn_Wildfire")
+richness <- colSums(f.wo.otu.rel > 0)
+f.wo.map$Richness <- richness
+
+# make sure IDs are identical in abundance and metadata tables
+identical(colnames(f.wo.otu.rel), f.wo.map$ViromeID)
+```
+# Supplementary Figures 1D-E
+# Load Input Data
+```{r}
+lnu.phylum.long <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/lnu_phylum_long.RDS")
+wildfire_asv_map <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/rds/wildfire_asv_map.RDS")
+lnu.phylum.map <- merge(lnu.phylum.long, wildfire_asv_map, by="ASV_ID")
+```
+# Supplementary Figure 1D
+# Load Input Data
+```{r}
+burn_lnu.phylum.map <- lnu.phylum.map[(lnu.phylum.map$Treatment=="AfterBurn_Wildfire"),]
+```
+# Make Stacked Bar Plot
+```{r}
+ggplot(burn_lnu.phylum.map, aes(x=TimePoint_ID, y=counts, fill=NewPhylum))+
+    labs(x="TimePoint", 
+       y ="Counts",
+       title = "LNU 16S rRNA ASV Profile")+
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(4.5, 8.5, 16.5, 24.5), linetype = "solid", color = "grey20", linewidth = 0.15)+
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_grid(~Habitat)
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/prokaryotes/burn_lnu_phylum_timepoint.pdf", width = 300, height = 150, units = "mm", dpi = 500)
+```
+# Supplementary Figure 1E
+# Load Input Data
+```{r}
+control_lnu.phylum.map <- lnu.phylum.map[(lnu.phylum.map$Treatment=="AfterBurn_Control"),]
+```
+# Make Stacked Bar Plot
+```{r}
+ggplot(control_lnu.phylum.map, aes(x=TimePoint_ID, y=counts, fill=NewPhylum))+
+    labs(x="TimePoint", 
+       y ="Counts",
+       title = "LNU 16S rRNA ASV Profile")+
+  geom_bar(stat="identity", position = "fill")+
+  scale_fill_manual(values=collapsed_phylum_colors) +
+  geom_vline(xintercept = c(4.5, 8.5, 16.5), linetype = "solid", color = "grey20", linewidth = 0.15)+
+  theme_bw() +
+  theme(legend.position = "bottom") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_grid(~Habitat)
+ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/StackedBar/prokaryotes/control_lnu_phylum_timepoint.pdf", width = 300, height = 150, units = "mm", dpi = 500)
+```
+
