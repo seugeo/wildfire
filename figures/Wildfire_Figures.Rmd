@@ -28,54 +28,51 @@ nutmtx <- function(chem) {
     as.data.frame()
 row.names(nut.mtx) <- nut.mtx$ViromeID
 return(nut.mtx)}
-
 # REMOVE SINGLETONS (only appears in one sample)
 rmv_sngl <- function(data) {
   data <- data[rowSums(data>0) >1,]
   data <- data[, colSums(data)>0]
 return(data)}
-
 # RELATIVIZE
 relativize <- function(data) {
   data.rel=decostand(data, method = "total", MARGIN = 2)
 return(data.rel)}
-
 # CALCULATE DISTANCE MATRIX
 distance <- function(data.rel) {
   data.dist=vegdist(t(data.rel), method = "bray")
 return(data.dist)}
-
 # CALCULATE PCOA POINTS
 pcoa <- function(data.dist) {
   data.pcoa=cmdscale(data.dist, eig = TRUE)
 return(data.pcoa)}
-
 # CREATE DATA FRAME WITH PCOA POINTS
 pcoa.points <- function(data.pcoa) {
   data.pcoa.points=data.frame(data.pcoa$points)
   colnames(data.pcoa.points)=c("pcoa1", "pcoa2")
 return(data.pcoa.points)}
-
 # JOIN METADATA AND PCOA DATA (vOTUs)
 pcoa.map <- function(data.pcoa.points,map) {
   data.pcoa.points$ViromeID <- rownames(data.pcoa.points)
   data.map=left_join(data.pcoa.points,map,by="ViromeID")
 return(data.map)}
-
 # JOIN METADATA AND PCOA DATA (ASVs)
 pcoa.map.asv <- function(data.pcoa.points,map) {
   data.pcoa.points$ASV_ID <- rownames(data.pcoa.points)
   data.map=left_join(data.pcoa.points,map,by="ASV_ID")
 return(data.map)}
-
 # CALCULATE VARIANCE EXPLAINED
 variance <- function(data.pcoa, x) {
   data.pcoa$eig[x]/sum(data.pcoa$eig)}
 ```
 
-
 # FIGURE 1
 # Figure 1A - Map
+# Load packages
+```{r}
+library(sf)
+library(ggspatial)
+library(tidyverse)
+```
 # Load input data
 ```{r}
 wildfire_sample_locations <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/wildfire_gps_data.RDS")
@@ -88,12 +85,6 @@ quail_sf <- st_as_sf(quail_locations, coords = c("longitude", "latitude"), crs =
 
 mcl_locations <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/input data/mcl_locations.RDS")
 mcl_sf <- st_as_sf(mcl_locations, coords = c("longitude", "latitude"), crs = 4326)
-```
-# Load packages
-```{r}
-library(sf)
-library(ggspatial)
-library(tidyverse)
 ```
 # Create maps
 ```{r}
@@ -193,24 +184,43 @@ DNA_NA_0.stats <- DNA_NA_0
 DNA_NA_0_c_ctrl <- DNA_NA_0.stats %>%
   filter(Habitat == "Chaparral"&Treatment == "Control")
 kruskal.test(DNA_g ~ TimePoint, DNA_NA_0_c_ctrl)
+
 DNA_NA_0_c_burn <- DNA_NA_0.stats %>%
   filter(Habitat == "Chaparral"&Treatment == "Burn")
 kruskal.test(DNA_g ~ TimePoint, DNA_NA_0_c_burn)
+
 DNA_NA_0_w_ctrl <- DNA_NA_0.stats %>%
   filter(Habitat == "Woodland"&Treatment == "Control")
 kruskal.test(DNA_g ~ TimePoint, DNA_NA_0_w_ctrl)
+
 DNA_NA_0_w_burn <- DNA_NA_0.stats %>%
   filter(Habitat == "Woodland"&Treatment == "Burn")
 kruskal.test(DNA_g ~ TimePoint, DNA_NA_0_w_burn)
-DNA_NA_0_T3 <- DNA_NA_0.stats %>%
-  filter(TimePoint == "T3")
-kruskal.test(DNA_g ~ Treatment, DNA_NA_0_T3)
-DNA_NA_0_T4 <- DNA_NA_0.stats %>%
-  filter(TimePoint == "T4")
-kruskal.test(DNA_g ~ Treatment, DNA_NA_0_T4)
-DNA_NA_0_T5 <- DNA_NA_0.stats %>%
-  filter(TimePoint == "T5")
-kruskal.test(DNA_g ~ Treatment, DNA_NA_0_T5)
+
+DNA_NA_0_c_T3 <- DNA_NA_0.stats %>%
+  filter(Habitat == "Chaparral"&TimePoint == "T3")
+kruskal.test(DNA_g ~ Treatment, DNA_NA_0_c_T3)
+
+DNA_NA_0_w_T3 <- DNA_NA_0.stats %>%
+  filter(Habitat == "Woodland"&TimePoint == "T3")
+kruskal.test(DNA_g ~ Treatment, DNA_NA_0_w_T3)
+
+DNA_NA_0_c_T4 <- DNA_NA_0.stats %>%
+  filter(Habitat == "Chaparral"&TimePoint == "T4")
+kruskal.test(DNA_g ~ Treatment, DNA_NA_0_c_T4)
+
+DNA_NA_0_w_T4 <- DNA_NA_0.stats %>%
+  filter(Habitat == "Woodland"&TimePoint == "T4")
+kruskal.test(DNA_g ~ Treatment, DNA_NA_0_w_T4)
+
+DNA_NA_0_c_T5 <- DNA_NA_0.stats %>%
+  filter(Habitat == "Chaparral"&TimePoint == "T5")
+kruskal.test(DNA_g ~ Treatment, DNA_NA_0_c_T5)
+
+DNA_NA_0_w_T5 <- DNA_NA_0.stats %>%
+  filter(Habitat == "Woodland"&TimePoint == "T5")
+kruskal.test(DNA_g ~ Treatment, DNA_NA_0_w_T5)
+
 
 # stats on DNA yield 
 # this is where the NA values are replaced with a 0.49
@@ -228,9 +238,6 @@ DNA_NA_0.49_w_burn <- DNA_NA_0.49.stats %>%
   filter(Habitat == "Woodland"&Treatment == "Burn")
 kruskal.test(DNA_g ~ TimePoint, DNA_NA_0.49_w_burn)
 ```
-
-
-
 # Figure 1C - PCA of Environmental Data
 # Load input data
 ```{r}
@@ -241,7 +248,6 @@ chem_wildfire <- readRDS("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfir
 library(vegan)
 library(tidyverse)
 ```
-
 # Z-transformed Nutrient Matrix (T0-T5)
 ```{r}
 # Prep dataframe
@@ -258,7 +264,7 @@ w.nut.mtx <- as.matrix(w.nut.mtx)
 # PCA of Z-Transformed Chemical Properties
 ```{r}
 pca.w.nut.mtx <- as.data.frame(w.nut.mtx) %>%
-  select(Moisture, SoilpH, OrganicMatter, AvailableP, Calcium, Magnesium, Potassium, Sodium)
+  select(Moisture, SoilpH, OrganicMatter, Nitrate, InorganicPhosphorus, Calcium, Magnesium, Potassium, Sodium)
 w.nut.dist <- as.matrix(dist(pca.w.nut.mtx, method = "euclidean"))
 pca_fit <- princomp(pca.w.nut.mtx, cor = TRUE)
 scores <- as.data.frame(pca_fit$scores)
@@ -317,8 +323,6 @@ ggsave("C:/Users/segeo/Box Sync/EmersonLab/Research/Ch3Wildfire/R_Figures/pdf/PC
 adonis2(w.nut.dist ~ w_pca_map$'BurnStatus')
 adonis2(w.nut.dist ~ w_pca_map$'Habitat')
 ```
-
-
 
 # FIGURE 2
 # Figure 2A - Virome PCoA
@@ -380,11 +384,6 @@ adonis2(formula = otu.dist ~ Treatment * Habitat, data = otu.map)
 # Test of dispersion
 set.seed(123)
 betadisp_result <- betadisper(otu.dist, otu.map$"Treatment")
-permutest_result <- permutest(betadisp_result, permutations = 999)
-print(permutest_result)
-
-set.seed(123)
-betadisp_result <- betadisper(otu.dist, otu.map$"Habitat")
 permutest_result <- permutest(betadisp_result, permutations = 999)
 print(permutest_result)
 ```
@@ -502,7 +501,7 @@ T3.ch.otu.phylum.stack <- T3.ch.otu.phylum.stack %>%
   mutate(NewHostPhylum = ifelse(all(RelAbd < 0.001), 'Other', HostPhylum)) %>%
   ungroup()
 
-iphop_wildfire_data <- iphop_wildfire_data %>%
+iphop_wildfire_data <- wildfire_data %>%
   mutate(Treatment_ID = paste(Treatment, "-", SubPlot)) %>%
   arrange(Treatment_ID)
 
@@ -598,9 +597,6 @@ T3.wo.otu.phylum.stack <- T3.wo.otu.phylum.stack %>%
   ungroup()
 
 iphop_wildfire_data <- wildfire_data %>%
-  mutate(Time_ID = paste(TimePoint, "-", SubPlot)) %>%
-  arrange(Time_ID)
-iphop_wildfire_data <- iphop_wildfire_data %>%
   mutate(Treatment_ID = paste(Treatment, "-", SubPlot)) %>%
   arrange(Treatment_ID)
 
@@ -1051,8 +1047,6 @@ kruskal.test(counts ~ Treatment, wo.planc_phylum.asv)
 kruskal.test(counts ~ Treatment, wo.proteo_phylum.asv)
 kruskal.test(counts ~ Treatment, wo.verru_phylum.asv) 
 ```
-
-
 
 # FIGURE 3
 # Figure 3A - PIGEONv2.0 db + Blodgett - Pie Chart
